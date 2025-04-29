@@ -1,62 +1,58 @@
-<style>
-    /* Make the buttons cover the entire background */
-    .button-container {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(50px, 1fr));
-        grid-auto-rows: 1fr;
-        gap: 5px;
-        height: 100vh;
-        width: 100vw;
-        padding: 0;
-        position: absolute;
-        top: 0;
-        left: 0;
-    }
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="IE=Standards" />
+    <title>Web Chat</title>
+  </head>
+  <body>
+    <button onclick="handleAuth()">Start Authentication</button>
+    <button onclick="endAuth()">Clear Authentication</button>
+  </body>
 
-    .button-container button {
-        width: 100%;
-        height: 100%;
-        padding: 10px;
-        font-size: 14px;
-        font-weight: bold;
-        background-color: #007BFF;
-        color: white;
-        border: none;
-        cursor: pointer;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-    }
-
-    .button-container button:hover {
-        background-color: #0056b3;
-    }
-</style>
-
-<body>
-    <!-- Grid of 100 buttons -->
-    <div class="button-container">
-        <script>
-            document.addEventListener("DOMContentLoaded", function () {
-                let container = document.querySelector(".button-container");
-                let totalButtons = 100;
-                let rows = Math.ceil(Math.sqrt(totalButtons));
-                let cols = Math.ceil(totalButtons / rows);
-                container.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
-                container.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
-                
-                for (let i = 1; i <= totalButtons; i++) {
-                    let btn = document.createElement("button");
-                    btn.textContent = `Open ${i}`;
-                    btn.onclick = () => window.open('https://example.com', '_blank');
-                    container.appendChild(btn);
-                }
-            });
-        </script>
-    </div>
-<!-- Start of d3v-shweta Zendesk Widget script -->
-<script id="ze-snippet" src="https://static.zdassets.com/ekr/snippet.js?key=aaf5cd03-f84b-480a-9030-550e2b67a1ed"> 
-</script>
-<!-- End of d3v-shweta Zendesk Widget script -->
+  <script>
+  (function() {
+    var ns = document.createElement('script');
+    ns.src = ('https://chatapps-qa.netomi.com/app/script.js');ns.type = 'text/javascript'; ns.async = true;
+    ns.setAttribute('botRefId', 'a5addd98-2627-437b-899c-2f97ff2e2b18');
+    var s = document.getElementsByTagName('script')[0];s.parentNode.insertBefore(ns, s);
+    ns.onload = function () {window.NETOMI_WEB_WIDGET.init(() => {/* add publish events here */})}})();
   
-</body>
+    let id = null;
+    let counter = 0
+    async function handleAuth() {
+
+      async function renewToken() {
+       const {token} = await fetch('https://chatapps-qa.netomi.com/api/fetchJWT',  {method: 'post', headers: { 'href':'https://revanshasti.github.io/Hosting-sites/Button.html','Content-Type': 'application/json',  'x-token-expiry': '1h','x-bot-ref-id':'a5addd98-2627-437b-899c-2f97ff2e2b18', 'x-user-details': JSON.stringify({"name": "Revan Shasti", "externalId": "revan@gmail.com"})}})
+        return token
+    }
+    
+      const tokenApiCall = await fetch('https://chatapps-qa.netomi.com/api/fetchJWT',  {
+        method: 'post', 
+        headers: { 
+          'href':'https://revanshasti.github.io/Hosting-sites/Button.html',
+          'Content-Type': 'application/json', 
+          'x-token-expiry': '1h', 
+          'x-bot-ref-id':'a5addd98-2627-437b-899c-2f97ff2e2b18', 
+          'x-user-details': JSON.stringify({"name": "Revan Shasti", "externalId": "revan@gmail.com"}) 
+        }})
+      const {token} = await tokenApiCall.json()
+      window.NETOMI_WEB_WIDGET.authModule.login(token)
+      id = setInterval(() => {
+        window.NETOMI_WEB_WIDGET.authModule.jwtAuth(async sendTokenToNetomi => {
+          const tokenApiCall = await fetch('https://chatapps-qa.netomi.com/api/fetchJWT',  {method: 'post', headers: { 'href':'https://revanshasti.github.io/Hosting-sites/Button.html','Content-Type': 'application/json', 'x-token-expiry': '1h', 'x-bot-ref-id':'a5addd98-2627-437b-899c-2f97ff2e2b18', 'x-user-details': JSON.stringify({"name": "Revan Shasti", "externalId": "revan@gmail.com"}) }})
+          const token = await tokenApiCall.json()
+          sendTokenToNetomi(token, renewToken)
+        })      
+      }, 3300000)
+    }
+
+    function endAuth() {
+      clearInterval(id)
+      window.NETOMI_WEB_WIDGET.authModule.logout()
+    }
+
+
+  </script>
+
+</html>
