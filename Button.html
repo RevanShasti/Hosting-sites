@@ -14,7 +14,7 @@
   (function() {
     var ns = document.createElement('script');
     ns.src = ('https://chatapps-azus.netomi.com/app/script.js');ns.type = 'text/javascript'; ns.async = true;
-    ns.setAttribute('botRefId', 'c726eadb-53b6-4c75-b342-1bb848764542');
+    ns.setAttribute('botRefId', '240644e6-bad3-4c21-a0fd-ba0fba7f51da');
     var s = document.getElementsByTagName('script')[0];s.parentNode.insertBefore(ns, s);
     ns.onload = function () {window.NETOMI_WEB_WIDGET.init(() => {/* add publish events here */})}})();
   
@@ -23,7 +23,7 @@
     async function handleAuth() {
 
       async function renewToken() {
-       const {token} = await fetch('https://chatapps-azus.netomi.com/api/fetchJWT',  {method: 'post', headers: { 'href':'https://revanshasti.github.io/Hosting-sites/Button.html','Content-Type': 'application/json',  'x-token-expiry': '1h','x-bot-ref-id':'c726eadb-53b6-4c75-b342-1bb848764542', 'x-user-details': JSON.stringify({"name": "Revan Shasti", "externalId": "revan@gmail.com"})}})
+       const {token} = await fetch('https://chatapps-azus.netomi.com/api/fetchJWT',  {method: 'post', headers: { 'href':'https://revanshasti.github.io/Hosting-sites/Button.html','Content-Type': 'application/json',  'x-token-expiry': '1h','x-bot-ref-id':'240644e6-bad3-4c21-a0fd-ba0fba7f51da', 'x-user-details': JSON.stringify({"name": "Revan Shasti", "externalId": "revan@gmail.com"})}})
         return token
     }
     
@@ -33,14 +33,14 @@
           'href':'https://revanshasti.github.io/Hosting-sites/Button.html',
           'Content-Type': 'application/json', 
           'x-token-expiry': '1h', 
-          'x-bot-ref-id':'c726eadb-53b6-4c75-b342-1bb848764542', 
+          'x-bot-ref-id':'240644e6-bad3-4c21-a0fd-ba0fba7f51da', 
           'x-user-details': JSON.stringify({"name": "Revan Shasti", "externalId": "revan@gmail.com"}) 
         }})
       const {token} = await tokenApiCall.json()
       window.NETOMI_WEB_WIDGET.authModule.login(token)
       id = setInterval(() => {
         window.NETOMI_WEB_WIDGET.authModule.jwtAuth(async sendTokenToNetomi => {
-          const tokenApiCall = await fetch('https://chatapps-azus.netomi.com/api/fetchJWT',  {method: 'post', headers: { 'href':'https://revanshasti.github.io/Hosting-sites/Button.html','Content-Type': 'application/json', 'x-token-expiry': '1h', 'x-bot-ref-id':'c726eadb-53b6-4c75-b342-1bb848764542', 'x-user-details': JSON.stringify({"name": "Revan Shasti", "externalId": "revan@gmail.com"}) }})
+          const tokenApiCall = await fetch('https://chatapps-azus.netomi.com/api/fetchJWT',  {method: 'post', headers: { 'href':'https://revanshasti.github.io/Hosting-sites/Button.html','Content-Type': 'application/json', 'x-token-expiry': '1h', 'x-bot-ref-id':'240644e6-bad3-4c21-a0fd-ba0fba7f51da', 'x-user-details': JSON.stringify({"name": "Revan Shasti", "externalId": "revan@gmail.com"}) }})
           const token = await tokenApiCall.json()
           sendTokenToNetomi(token, renewToken)
         })      
