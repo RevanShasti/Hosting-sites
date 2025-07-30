@@ -15,5 +15,14 @@
     ns.setAttribute('botRefId', '07980c42-8628-4c0f-8c91-2590abf8e5ab');
     var s = document.getElementsByTagName('script')[0];s.parentNode.insertBefore(ns, s);
     ns.onload = function () {window.Netomi.chat.init(() => {/* add publish events here */})}})();
+        function changeLocale() {
+
+    	// To change the language of the AI Agent, pass a language code in the changeLocale method.
+
+	    const language = "fr";
+
+	    Netomi.chat.changeLocale(language)
+
+	};
 </script>
 </html>
