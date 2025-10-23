@@ -25,7 +25,7 @@
 
       async function renewToken() {
        const {token} = await fetch('https://chatapps-qa-a.netomi.com/api/fetchJWT',  {method: 'post', headers: { 'href':'https://revanshasti.github.io/Hosting-sites/Authentication.html',
-        'Content-Type': 'application/json',  'x-token-expiry': '1h','x-bot-ref-id':'6f9d2245-e1eb-4872-a83e-42c9752bfac3', 'x-user-details': JSON.stringify({"name": "Revan Shasti", "userId": "revan@gmail.com"})}})
+        'Content-Type': 'application/json',  'x-token-expiry': '1h','x-bot-ref-id':'6f9d2245-e1eb-4872-a83e-42c9752bfac3', 'x-user-details': JSON.stringify({"name": "Revan Shasti", "externalId": "revan@gmail.com"})}})
         return token
     }
     
@@ -36,14 +36,14 @@
           'Content-Type': 'application/json', 
           'x-token-expiry': '1h', 
           'x-bot-ref-id':'6f9d2245-e1eb-4872-a83e-42c9752bfac3', 
-          'x-user-details': JSON.stringify({"name": "Revan Shasti", "userId": "revan@gmail.com"}) 
+          'x-user-details': JSON.stringify({"name": "Revan Shasti", "externalId": "revan@gmail.com"}) 
         }})
       const {token} = await tokenApiCall.json()
       window.NETOMI_WEB_WIDGET.authModule.login(token)
       id = setInterval(() => {
         window.NETOMI_WEB_WIDGET.authModule.jwtAuth(async sendTokenToNetomi => {
           const tokenApiCall = await fetch('https://chatapps-qa-a.netomi.com/api/fetchJWT',  {method: 'post', headers: { 'href':'https://revanshasti.github.io/Hosting-sites/Authentication.html',
-            'Content-Type': 'application/json', 'x-token-expiry': '1h', 'x-bot-ref-id':'6f9d2245-e1eb-4872-a83e-42c9752bfac3', 'x-user-details': JSON.stringify({"name": "Revan Shasti", "userId": "revan@gmail.com"}) }})
+            'Content-Type': 'application/json', 'x-token-expiry': '1h', 'x-bot-ref-id':'6f9d2245-e1eb-4872-a83e-42c9752bfac3', 'x-user-details': JSON.stringify({"name": "Revan Shasti", "externalId": "revan@gmail.com"}) }})
           const token = await tokenApiCall.json()
           sendTokenToNetomi(token, renewToken)
         })      
