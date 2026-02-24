@@ -16,6 +16,7 @@
     setVisitorInfo(source);
     window.Netomi.chat.showWidget();
     window.Netomi.chat.openWidget();
+    hideOnInit = "true"
   }
 </script>
 <script type="text/javascript">
@@ -31,11 +32,11 @@ var botRefId = "2be59370-0ce8-4fd7-8f6f-b1e6de2ea32d";
     ns.setAttribute("botRefId", botRefId);
     var s = document.getElementsByTagName("script")[0];
     s.parentNode.insertBefore(ns, s);
-    ns.onload = function() {
-        Netomi.chat.onLoad(() => {
-            window.Netomi.chat.hideWidget();
-            console.log('chat widget loaded');
-        });
+    //ns.onload = function() {
+       // Netomi.chat.onLoad(() => {
+           // window.Netomi.chat.hideWidget();
+           // console.log('chat widget loaded');
+        //});
         window.NETOMI_WEB_WIDGET.init(() => {
             console.log('init')
             setVisitorInfo();
