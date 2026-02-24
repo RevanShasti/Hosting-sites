@@ -16,7 +16,6 @@
     setVisitorInfo(source);
     window.Netomi.chat.showWidget();
     window.Netomi.chat.openWidget();
-    hideOnInit = "true"
   }
 </script>
 <script type="text/javascript">
@@ -30,6 +29,7 @@ var botRefId = "2be59370-0ce8-4fd7-8f6f-b1e6de2ea32d";
     ns.async = true;
     ns.setAttribute('enableEventQueue', 'true');
     ns.setAttribute("botRefId", botRefId);
+  ns.setAttribute('hideOnInit', 'true');
     var s = document.getElementsByTagName("script")[0];
     s.parentNode.insertBefore(ns, s);
     //ns.onload = function() {
