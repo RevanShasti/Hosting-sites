@@ -95,42 +95,33 @@
 </div>
 
 <script>
-var botRefId = "a5addd98-2627-437b-899c-2f97ff2e2b18";
-(function() {
-    var ns = document.createElement("script");
-    ns.src = "https://chatapps-qa-a.netomi.com/app/script.js";
-    ns.type = "text/javascript";
-    ns.async = true;
-    ns.setAttribute('enableEventQueue', 'true');
-    ns.setAttribute("botRefId", botRefId);
-    ns.setAttribute('hideOnInit', 'true');
-    var s = document.getElementsByTagName("script")[0];
-    s.parentNode.insertBefore(ns, s);
-})();
+document.addEventListener("DOMContentLoaded", function () {
 
-function setVisitorInfo(button_source) {
-    window.NETOMI_WEB_WIDGET.publish('VISITOR_INFO', {
-        CURRENT_TIME: new Date().toLocaleTimeString(),
-        BUTTON_SOURCE: button_source
-    });
-}
-</script>
+  const btn = document.getElementById("contactServiceBtn");
+  const popup = document.getElementById("popup");
+  const chatBtn = document.getElementById("chatBtn");
 
-<script>
-const btn = document.getElementById("contactServiceBtn");
-const popup = document.getElementById("popup");
-const chatBtn = document.getElementById("chatBtn");
+  // Toggle popup
+  btn.addEventListener("click", function (e) {
+    e.stopPropagation();
+    popup.style.display = popup.style.display === "block" ? "none" : "block";
+  });
 
-btn.onclick = (e) => {
-  e.stopPropagation();
-  popup.style.display = popup.style.display === "block" ? "none" : "block";
-};
+  // Chat click
+  chatBtn.addEventListener("click", function (e) {
+    e.stopPropagation();
+    popup.style.display = "none";
+    openWidget('start_chat');
+  });
 
-chatBtn.onclick = (e) => {
-  e.stopPropagation();
-  popup.style.display = "none";
-  openWidget('start_chat');
-};
+  // Close popup on outside click
+  document.addEventListener("click", function (e) {
+    if (!popup.contains(e.target) && e.target !== btn) {
+      popup.style.display = "none";
+    }
+  });
+
+});
 
 function openWidget(source) {
   setVisitorInfo(source);
@@ -140,14 +131,11 @@ function openWidget(source) {
 function triggerChat() {
   if (window.Netomi && window.Netomi.chat) {
 
-    // Step 1: Initialize widget
     window.Netomi.chat.initializeWidget();
 
-    // Step 2: Delay opening to allow viewport stabilization
     setTimeout(() => {
       window.Netomi.chat.openWidget();
 
-      // Step 3: Force resize event to fix mobile height issue
       setTimeout(() => {
         window.dispatchEvent(new Event('resize'));
       }, 300);
@@ -157,17 +145,7 @@ function triggerChat() {
   } else {
     setTimeout(triggerChat, 300);
   }
-} else {
-    setTimeout(triggerChat, 300);
-  }
 }
-
-window.addEventListener('click', function(e) {
-  if (!popup.contains(e.target) && e.target !== btn) {
-    popup.style.display = 'none';
-  }
-});
 </script>
-
 </body>
 </html>
