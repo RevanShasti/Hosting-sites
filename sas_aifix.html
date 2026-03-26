@@ -129,46 +129,19 @@ function openWidget(source) {
 
   triggerChat();
 }
-  triggerChat();
-}
 
 function triggerChat() {
-
-  // Initialize first (required when hideOnInit = true)
   try {
     if (window.Netomi && window.Netomi.chat) {
       window.Netomi.chat.initializeWidget();
     } else if (window.Netomi) {
       window.Netomi.chat.initializeWidget();
     }
-  } catch (e) {
-    // ignore if already initialized
-  }
+  } catch (e) {}
 
-  // Then wait until Netomi is ready and open
   waitForNetomiAndOpen();
 }
 
-    setTimeout(function () {
-      console.log('Opening widget...');
-
-      if (window.Netomi.chat.showWidget) {
-        window.Netomi.chat.showWidget();
-      }
-
-      window.Netomi.chat.openWidget();
-
-      setTimeout(function () {
-        window.dispatchEvent(new Event('resize'));
-      }, 300);
-
-    }, 500);
-
-  } else {
-    console.log('Waiting for Netomi...');
-    setTimeout(triggerChat, 500);
-  }
-}
 function waitForNetomiAndOpen() {
   if (window.Netomi && window.Netomi.chat) {
 
@@ -182,7 +155,6 @@ function waitForNetomiAndOpen() {
 
       window.Netomi.chat.openWidget();
 
-      // Force resize to fix mobile fullscreen issue
       setTimeout(function () {
         window.dispatchEvent(new Event('resize'));
       }, 300);
