@@ -1,106 +1,97 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en-LU" data-market="lu-en" data-country="lu" data-lang="en" data-currency="EUR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SAS Styled Chat Integration</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SAS Replica - Chat Issue Reproduction</title>
 
   <style>
-    /* Base SAS-like minimal styling */
-    body {
+    /* Simulating SAS layout issues */
+    html, body {
+      height: 100%;
       margin: 0;
-      font-family: "Helvetica Neue", Arial, sans-serif;
-      color: #1a1a1a;
-      background: #fff;
+      overflow: hidden; /* KEY: Causes chat cut-off */
+      font-family: Arial, sans-serif;
     }
 
-    h1 {
-      font-size: 22px;
-      font-weight: 600;
-      margin: 20px;
+    .page-container {
+      height: 100vh; /* Mobile viewport issue */
+      overflow: hidden;
+      position: relative;
+      background: #f5f5f5;
     }
 
-    /* Floating CTA similar to SAS support entry */
+    .content {
+      height: 100%;
+      overflow-y: auto;
+      padding: 20px;
+    }
+
+    /* SAS-like button */
     #contactServiceBtn {
       position: fixed;
-      bottom: 24px;
-      right: 24px;
+      bottom: 20px;
+      right: 20px;
       padding: 12px 16px;
       background: #0051ff;
       color: #fff;
       border: none;
-      border-radius: 24px;
+      border-radius: 25px;
       font-size: 14px;
-      font-weight: 500;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-      cursor: pointer;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
       z-index: 9999;
     }
 
-    #contactServiceBtn:hover {
-      background: #003fcc;
-    }
-
-    /* Popup aligned with SAS modal feel */
     #popup {
       display: none;
       position: fixed;
       bottom: 80px;
-      right: 24px;
-      width: 260px;
-      background: #fff;
-      border-radius: 12px;
-      box-shadow: 0 6px 20px rgba(0,0,0,0.2);
-      padding: 16px;
+      right: 20px;
+      width: 250px;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+      padding: 15px;
       z-index: 9999;
-      animation: fadeIn 0.2s ease-in-out;
-    }
-
-    #popup p {
-      margin: 0 0 10px;
-      font-size: 14px;
-      font-weight: 500;
     }
 
     .option-btn {
       width: 100%;
       padding: 10px;
-      border: 1px solid #e0e0e0;
-      background: #f9f9f9;
-      border-radius: 8px;
+      margin-top: 10px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      background: #fafafa;
       cursor: pointer;
-      text-align: left;
-      font-size: 14px;
-      margin-top: 8px;
     }
 
-    .option-btn:hover {
-      background: #f1f5ff;
-      border-color: #0051ff;
-    }
-
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
   </style>
 </head>
 
 <body>
-  <h1>Got a question?</h1>
 
-  <!-- CTA Button (matches SAS minimal style) -->
-  <button id="contactServiceBtn">Need to contact customer service</button>
-
-  <!-- Popup (SAS-like selection card) -->
-  <div id="popup">
-    <p>Contact options</p>
-    <button class="option-btn" id="chatBtn">💬 Chat with us</button>
+<div class="page-container">
+  <div class="content">
+    <h2>SAS Support Page (Replica)</h2>
+    <p>This page mimics SAS layout constraints to reproduce mobile chat issue.</p>
+    <p>Scroll content here...</p>
+    <div style="height: 1500px;"></div>
   </div>
+</div>
 
-  <!-- Netomi Script (unchanged core behavior) -->
-  <script>
-    var botRefId = "a5addd98-2627-437b-899c-2f97ff2e2b18";
+<!-- Contact Button -->
+<button id="contactServiceBtn">Need to contact customer service</button>
+
+<!-- Popup -->
+<div id="popup">
+  <p>Contact options</p>
+  <button class="option-btn" id="chatBtn">💬 Chat</button>
+</div>
+
+<!-- Netomi Script -->
+<script>
+var botRefId = "a5addd98-2627-437b-899c-2f97ff2e2b18";
+(function() {
     var ns = document.createElement("script");
     ns.src = "https://chatapps-qa-a.netomi.com/app/script.js";
     ns.type = "text/javascript";
@@ -108,38 +99,54 @@
     ns.setAttribute('enableEventQueue', 'true');
     ns.setAttribute("botRefId", botRefId);
     ns.setAttribute('hideOnInit', 'true');
-    document.head.appendChild(ns);
-  </script>
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(ns, s);
+})();
 
-  <!-- Behavior (minimal, non-intrusive) -->
-  <script>
-    const btn = document.getElementById("contactServiceBtn");
-    const popup = document.getElementById("popup");
-    const chatBtn = document.getElementById("chatBtn");
-
-    btn.onclick = () => {
-      popup.style.display = popup.style.display === "block" ? "none" : "block";
-    };
-
-    chatBtn.onclick = () => {
-      popup.style.display = "none";
-      initNetomi();
-    };
-
-    function initNetomi() {
-      if (window.Netomi && window.Netomi.chat) {
-        window.Netomi.chat.initializeWidget();
-      } else {
-        setTimeout(initNetomi, 300);
-      }
-    }
-
-    // Close popup if clicked outside (SAS-like UX)
-    document.addEventListener("click", function (e) {
-      if (!popup.contains(e.target) && e.target !== btn) {
-        popup.style.display = "none";
-      }
+function setVisitorInfo(button_source) {
+    window.NETOMI_WEB_WIDGET.publish('VISITOR_INFO', {
+        CURRENT_TIME: new Date().toLocaleTimeString(),
+        BUTTON_SOURCE: button_source
     });
-  </script>
+}
+</script>
+
+<!-- Behavior -->
+<script>
+const btn = document.getElementById("contactServiceBtn");
+const popup = document.getElementById("popup");
+const chatBtn = document.getElementById("chatBtn");
+
+btn.onclick = () => {
+  popup.style.display = popup.style.display === "block" ? "none" : "block";
+};
+
+chatBtn.onclick = () => {
+  popup.style.display = "none";
+  openWidget('start_chat');
+};
+
+function openWidget(source) {
+  setVisitorInfo(source);
+  triggerChat();
+}
+
+function triggerChat() {
+  if (window.Netomi && window.Netomi.chat) {
+    window.Netomi.chat.initializeWidget();
+    window.Netomi.chat.openWidget();
+  } else {
+    setTimeout(triggerChat, 300);
+  }
+}
+
+// Close popup on outside click
+window.addEventListener('click', function(e) {
+  if (!popup.contains(e.target) && e.target !== btn) {
+    popup.style.display = 'none';
+  }
+});
+</script>
+
 </body>
 </html>
