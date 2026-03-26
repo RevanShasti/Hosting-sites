@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en-LU" data-market="lu-en" data-country="lu" data-lang="en" data-currency="EUR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SAS Fixed Version - Chat Fullscreen Fix</title>
+
+  <style>
+    /* ✅ FIXED: allow full expansion */
+    html, body {
+      height: 100%;
+      margin: 0;
+      overflow: auto; /* FIX: removed hidden */
+      font-family: Arial, sans-serif;
+    }
+
+    /* ✅ FIXED: use dynamic viewport */
+    .page-container {
+      height: 100dvh; /* FIX: replaced 100vh */
+      position: relative;
+      background: #f5f5f5;
+    }
+
+    .content {
+      height: 100%;
+      overflow-y: auto;
+      padding: 20px;
+    }
+
+    /* Button (unchanged UI) */
+    #contactServiceBtn {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      padding: 12px 16px;
+      background: #0051ff;
+      color: #fff;
+      border: none;
+      border-radius: 25px;
+      font-size: 14px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+      z-index: 9999;
+    }
+
+    #popup {
+      display: none;
+      position: fixed;
+      bottom: 80px;
+      right: 20px;
+      width: 250px;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+      padding: 15px;
+      z-index: 9999;
+    }
+
+    .option-btn {
+      width: 100%;
+      padding: 10px;
+      margin-top: 10px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      background: #fafafa;
+      cursor: pointer;
+    }
+
+    /* ✅ EXTRA SAFETY: ensure Netomi iframe always fits screen */
+    iframe[src*="netomi"] {
+      height: 100dvh !important;
+      max-height: 100dvh !important;
+      top: 0 !important;
+      bottom: 0 !important;
+      position: fixed !important;
+    }
+
+  </style>
+</head>
+
+<body>
+
+<div class="page-container">
+  <div class="content">
+    <h2>SAS Support Page (Fixed Version)</h2>
+    <p>This version includes SAS-side fixes for mobile chat fullscreen issue.</p>
+    <div style="height: 1500px;"></div>
+  </div>
+</div>
+
+<button id="contactServiceBtn">Need to contact customer service</button>
+
+<div id="popup">
+  <p>Contact options</p>
+  <button class="option-btn" id="chatBtn">💬 Chat</button>
+</div>
+
+<script>
+var botRefId = "a5addd98-2627-437b-899c-2f97ff2e2b18";
+(function() {
+    var ns = document.createElement("script");
+    ns.src = "https://chatapps-qa-a.netomi.com/app/script.js";
+    ns.type = "text/javascript";
+    ns.async = true;
+    ns.setAttribute('enableEventQueue', 'true');
+    ns.setAttribute("botRefId", botRefId);
+    ns.setAttribute('hideOnInit', 'true');
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(ns, s);
+})();
+
+function setVisitorInfo(button_source) {
+    window.NETOMI_WEB_WIDGET.publish('VISITOR_INFO', {
+        CURRENT_TIME: new Date().toLocaleTimeString(),
+        BUTTON_SOURCE: button_source
+    });
+}
+</script>
+
+<script>
+const btn = document.getElementById("contactServiceBtn");
+const popup = document.getElementById("popup");
+const chatBtn = document.getElementById("chatBtn");
+
+btn.onclick = () => {
+  popup.style.display = popup.style.display === "block" ? "none" : "block";
+};
+
+chatBtn.onclick = () => {
+  popup.style.display = "none";
+  openWidget('start_chat');
+};
+
+function openWidget(source) {
+  setVisitorInfo(source);
+  triggerChat();
+}
+
+function triggerChat() {
+  if (window.Netomi && window.Netomi.chat) {
+    window.Netomi.chat.initializeWidget();
+    window.Netomi.chat.openWidget();
+  } else {
+    setTimeout(triggerChat, 300);
+  }
+}
+
+window.addEventListener('click', function(e) {
+  if (!popup.contains(e.target) && e.target !== btn) {
+    popup.style.display = 'none';
+  }
+});
+</script>
+
+</body>
+</html>
