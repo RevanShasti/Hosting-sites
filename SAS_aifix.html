@@ -121,11 +121,13 @@ const btn = document.getElementById("contactServiceBtn");
 const popup = document.getElementById("popup");
 const chatBtn = document.getElementById("chatBtn");
 
-btn.onclick = () => {
+btn.onclick = (e) => {
+  e.stopPropagation();
   popup.style.display = popup.style.display === "block" ? "none" : "block";
 };
 
-chatBtn.onclick = () => {
+chatBtn.onclick = (e) => {
+  e.stopPropagation();
   popup.style.display = "none";
   openWidget('start_chat');
 };
