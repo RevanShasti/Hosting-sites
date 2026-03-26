@@ -137,9 +137,25 @@ function openWidget(source) {
 
 function triggerChat() {
   if (window.Netomi && window.Netomi.chat) {
+
+    // Step 1: Initialize widget
     window.Netomi.chat.initializeWidget();
-    window.Netomi.chat.openWidget();
+
+    // Step 2: Delay opening to allow viewport stabilization
+    setTimeout(() => {
+      window.Netomi.chat.openWidget();
+
+      // Step 3: Force resize event to fix mobile height issue
+      setTimeout(() => {
+        window.dispatchEvent(new Event('resize'));
+      }, 300);
+
+    }, 300);
+
   } else {
+    setTimeout(triggerChat, 300);
+  }
+} else {
     setTimeout(triggerChat, 300);
   }
 }
