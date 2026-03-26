@@ -1,23 +1,20 @@
 <!DOCTYPE html>
-<html lang="en-LU" data-market="lu-en" data-country="lu" data-lang="en" data-currency="EUR">
+<html lang="en-LU">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SAS Fixed Version - Chat Fullscreen Fix</title>
+  <title>SAS Fix - Final</title>
 
   <style>
-    /* ✅ FIXED: allow full expansion */
     html, body {
       height: 100%;
       margin: 0;
-      overflow: auto; /* FIX: removed hidden */
+      overflow: auto;
       font-family: Arial, sans-serif;
     }
 
-    /* ✅ FIXED: use dynamic viewport */
     .page-container {
-      height: 100dvh; /* FIX: replaced 100vh */
-      position: relative;
+      height: 100dvh;
       background: #f5f5f5;
     }
 
@@ -27,7 +24,6 @@
       padding: 20px;
     }
 
-    /* Button (unchanged UI) */
     #contactServiceBtn {
       position: fixed;
       bottom: 20px;
@@ -64,16 +60,6 @@
       background: #fafafa;
       cursor: pointer;
     }
-
-    /* ✅ EXTRA SAFETY: ensure Netomi iframe always fits screen */
-    iframe[src*="netomi"] {
-      height: 100dvh !important;
-      max-height: 100dvh !important;
-      top: 0 !important;
-      bottom: 0 !important;
-      position: fixed !important;
-    }
-
   </style>
 </head>
 
@@ -81,9 +67,9 @@
 
 <div class="page-container">
   <div class="content">
-    <h2>SAS Support Page (Fixed Version)</h2>
-    <p>This version includes SAS-side fixes for mobile chat fullscreen issue.</p>
-    <div style="height: 1500px;"></div>
+    <h2>SAS Replica (Final Fix)</h2>
+    <p>Testing chat widget full screen issue.</p>
+    <div style="height:1500px;"></div>
   </div>
 </div>
 
@@ -93,6 +79,32 @@
   <p>Contact options</p>
   <button class="option-btn" id="chatBtn">💬 Chat</button>
 </div>
+
+<!-- Netomi Script -->
+<script>
+var botRefId = "a5addd98-2627-437b-899c-2f97ff2e2b18";
+
+(function() {
+  var ns = document.createElement("script");
+  ns.src = "https://chatapps-qa-a.netomi.com/app/script.js";
+  ns.type = "text/javascript";
+  ns.async = true;
+
+  ns.setAttribute("enableEventQueue", "true");
+  ns.setAttribute("botRefId", botRefId);
+  ns.setAttribute("hideOnInit", "true");
+
+  ns.onload = function () {
+    console.log("✅ Netomi script loaded");
+  };
+
+  ns.onerror = function () {
+    console.error("❌ Netomi script failed to load");
+  };
+
+  document.head.appendChild(ns);
+})();
+</script>
 
 <script>
 document.addEventListener("DOMContentLoaded", function () {
@@ -109,7 +121,7 @@ document.addEventListener("DOMContentLoaded", function () {
   chatBtn.addEventListener("click", function (e) {
     e.stopPropagation();
     popup.style.display = "none";
-    openWidget('start_chat');
+    openWidget("start_chat");
   });
 
   document.addEventListener("click", function (e) {
@@ -121,31 +133,22 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 
 function openWidget(source) {
-  console.log('Opening widget with source:', source);
+  console.log("Opening widget with source:", source);
 
   if (window.NETOMI_WEB_WIDGET) {
     setVisitorInfo(source);
   }
 
-  triggerChat();
+  waitForNetomi();
 }
 
-function triggerChat() {
-  try {
-    if (window.Netomi && window.Netomi.chat) {
-      window.Netomi.chat.initializeWidget();
-    } else if (window.Netomi) {
-      window.Netomi.chat.initializeWidget();
-    }
-  } catch (e) {}
-
-  waitForNetomiAndOpen();
-}
-
-function waitForNetomiAndOpen() {
+function waitForNetomi() {
   if (window.Netomi && window.Netomi.chat) {
 
-    console.log('Netomi ready after init');
+    console.log("✅ Netomi ready");
+
+    // Initialize (required for hideOnInit = true)
+    window.Netomi.chat.initializeWidget();
 
     setTimeout(function () {
 
@@ -155,6 +158,7 @@ function waitForNetomiAndOpen() {
 
       window.Netomi.chat.openWidget();
 
+      // Fix fullscreen issue
       setTimeout(function () {
         window.dispatchEvent(new Event('resize'));
       }, 300);
@@ -162,9 +166,20 @@ function waitForNetomiAndOpen() {
     }, 300);
 
   } else {
-    setTimeout(waitForNetomiAndOpen, 300);
+    console.log("⏳ Waiting for Netomi...");
+    setTimeout(waitForNetomi, 500);
+  }
+}
+
+function setVisitorInfo(source) {
+  if (window.NETOMI_WEB_WIDGET) {
+    window.NETOMI_WEB_WIDGET.publish('VISITOR_INFO', {
+      CURRENT_TIME: new Date().toLocaleTimeString(),
+      BUTTON_SOURCE: source
+    });
   }
 }
 </script>
+
 </body>
 </html>
