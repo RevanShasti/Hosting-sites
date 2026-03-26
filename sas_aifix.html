@@ -122,22 +122,32 @@ document.addEventListener("DOMContentLoaded", function () {
 
 function openWidget(source) {
   console.log('Opening widget with source:', source);
+
   if (window.NETOMI_WEB_WIDGET) {
     setVisitorInfo(source);
   }
+
+  triggerChat();
+}
   triggerChat();
 }
 
 function triggerChat() {
-  if (window.Netomi && window.Netomi.chat) {
 
-    console.log('Netomi available, initializing...');
-
-    try {
+  // Initialize first (required when hideOnInit = true)
+  try {
+    if (window.Netomi && window.Netomi.chat) {
       window.Netomi.chat.initializeWidget();
-    } catch (e) {
-      console.warn('Widget may already be initialized');
+    } else if (window.Netomi) {
+      window.Netomi.chat.initializeWidget();
     }
+  } catch (e) {
+    // ignore if already initialized
+  }
+
+  // Then wait until Netomi is ready and open
+  waitForNetomiAndOpen();
+}
 
     setTimeout(function () {
       console.log('Opening widget...');
@@ -157,6 +167,30 @@ function triggerChat() {
   } else {
     console.log('Waiting for Netomi...');
     setTimeout(triggerChat, 500);
+  }
+}
+function waitForNetomiAndOpen() {
+  if (window.Netomi && window.Netomi.chat) {
+
+    console.log('Netomi ready after init');
+
+    setTimeout(function () {
+
+      if (window.Netomi.chat.showWidget) {
+        window.Netomi.chat.showWidget();
+      }
+
+      window.Netomi.chat.openWidget();
+
+      // Force resize to fix mobile fullscreen issue
+      setTimeout(function () {
+        window.dispatchEvent(new Event('resize'));
+      }, 300);
+
+    }, 300);
+
+  } else {
+    setTimeout(waitForNetomiAndOpen, 300);
   }
 }
 </script>
