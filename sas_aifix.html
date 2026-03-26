@@ -101,20 +101,17 @@ document.addEventListener("DOMContentLoaded", function () {
   const popup = document.getElementById("popup");
   const chatBtn = document.getElementById("chatBtn");
 
-  // Toggle popup
   btn.addEventListener("click", function (e) {
     e.stopPropagation();
     popup.style.display = popup.style.display === "block" ? "none" : "block";
   });
 
-  // Chat click
   chatBtn.addEventListener("click", function (e) {
     e.stopPropagation();
     popup.style.display = "none";
     openWidget('start_chat');
   });
 
-  // Close popup on outside click
   document.addEventListener("click", function (e) {
     if (!popup.contains(e.target) && e.target !== btn) {
       popup.style.display = "none";
@@ -136,21 +133,22 @@ function triggerChat() {
 
     console.log('Netomi available, initializing...');
 
-    // Initialize only once safely
     try {
       window.Netomi.chat.initializeWidget();
     } catch (e) {
       console.warn('Widget may already be initialized');
     }
 
-    setTimeout(() => {
+    setTimeout(function () {
       console.log('Opening widget...');
+
       if (window.Netomi.chat.showWidget) {
         window.Netomi.chat.showWidget();
       }
+
       window.Netomi.chat.openWidget();
 
-      setTimeout(() => {
+      setTimeout(function () {
         window.dispatchEvent(new Event('resize'));
       }, 300);
 
@@ -159,13 +157,6 @@ function triggerChat() {
   } else {
     console.log('Waiting for Netomi...');
     setTimeout(triggerChat, 500);
-  }
-}, 300);
-
-    }, 300);
-
-  } else {
-    setTimeout(triggerChat, 300);
   }
 }
 </script>
