@@ -124,21 +124,43 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 
 function openWidget(source) {
-  setVisitorInfo(source);
+  console.log('Opening widget with source:', source);
+  if (window.NETOMI_WEB_WIDGET) {
+    setVisitorInfo(source);
+  }
   triggerChat();
 }
 
 function triggerChat() {
   if (window.Netomi && window.Netomi.chat) {
 
-    window.Netomi.chat.initializeWidget();
+    console.log('Netomi available, initializing...');
+
+    // Initialize only once safely
+    try {
+      window.Netomi.chat.initializeWidget();
+    } catch (e) {
+      console.warn('Widget may already be initialized');
+    }
 
     setTimeout(() => {
+      console.log('Opening widget...');
+      if (window.Netomi.chat.showWidget) {
+        window.Netomi.chat.showWidget();
+      }
       window.Netomi.chat.openWidget();
 
       setTimeout(() => {
         window.dispatchEvent(new Event('resize'));
       }, 300);
+
+    }, 500);
+
+  } else {
+    console.log('Waiting for Netomi...');
+    setTimeout(triggerChat, 500);
+  }
+}, 300);
 
     }, 300);
 
