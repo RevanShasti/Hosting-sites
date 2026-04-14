@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Netomi Controlled Init</title>
+</head>
+
+<body>
+
+<button onclick="startChat('start_chat')">Start Chat</button>
+<button onclick="startChat('call_us')">Call Us</button>
+
+<script>
+var botRefId = "2be59370-0ce8-4fd7-8f6f-b1e6de2ea32d";
+var widgetReady = false;
+var initializing = false;
+
+// Load script immediately, but widget won't load due to hideOnInit=true
+(function () {
+    var ns = document.createElement("script");
+    ns.src = "https://chatapps-qa-a.netomi.com/app/script.js";
+    ns.async = true;
+
+    ns.setAttribute("botRefId", botRefId);
+    ns.setAttribute("hideOnInit", "true");
+    ns.setAttribute("enableEventQueue", "true");
+
+    ns.onload = function () {
+        console.log("Base script loaded (widget not initialized)");
+    };
+
+    document.head.appendChild(ns);
+})();
+
+// Main trigger
+function startChat(source) {
+    if (widgetReady) {
+        openChat(source);
+        return;
+    }
+
+    if (!initializing) {
+        initializing = true;
+
+        console.log("Initializing widget...");
+
+        // This is the key step per your requirement
+        window.Netomi.chat.initializeWidget();
+
+        window.Netomi.chat.onLoad(() => {
+            console.log("Widget fully loaded");
+            widgetReady = true;
+            initializing = false;
+
+            openChat(source);
+        });
+    }
+}
+
+// Open chat
+function openChat(source) {
+    setVisitorInfo(source);
+
+    window.Netomi.chat.showWidget();
+    window.Netomi.chat.openWidget();
+}
+
+// Optional metadata
+function setVisitorInfo(source) {
+    if (window.NETOMI_WEB_WIDGET) {
+        window.NETOMI_WEB_WIDGET.publish("VISITOR_INFO", {
+            CURRENT_TIME: new Date().toLocaleTimeString(),
+            BUTTON_SOURCE: source
+        });
+    }
+}
+</script>
+
+</body>
+</html>
