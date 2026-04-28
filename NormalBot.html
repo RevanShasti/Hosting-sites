@@ -1,80 +1,67 @@
+<script>
+(function() {
+  var ns = document.createElement('script');
+  ns.src = 'https://chatapps-qa-a.netomi.com/app/script.js';
+  ns.async = true;
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Netomi Widget Tracking</title>
-</head>
-<body>
+  ns.setAttribute('botRefId', 'a5addd98-2627-437b-899c-2f97ff2e2b18');
+  ns.setAttribute("enableEventQueue", "true");
 
-  <button onclick="openSupport()">Support</button>
+  var s = document.getElementsByTagName('script')[0] || document.body;
+  s.parentNode.insertBefore(ns, s);
 
-  <script>
-    function openSupport() {
-      if (window.Netomi && Netomi.chat) {
-        console.log('[EVENT] Widget opened');
-        Netomi.chat.openWidget();
-      } else {
-        console.warn("Netomi not loaded yet");
-      }
+  ns.onload = function () {
+    console.log("Widget script loaded");
+
+    if (window.NETOMI_WEB_WIDGET) {
+      window.NETOMI_WEB_WIDGET.init(() => {
+        console.log("Widget initialized");
+      });
     }
 
-    (function() {
-      var ns = document.createElement('script');
-      ns.src = 'https://chatapps-qa-a.netomi.com/app/script.js';
-      ns.async = true;
+    waitForWidget();
+  };
 
-      ns.setAttribute('botRefId', 'a5addd98-2627-437b-899c-2f97ff2e2b18');
-      ns.setAttribute("enableEventQueue", "true");
+  function waitForWidget() {
+    const checkInterval = setInterval(() => {
+      const widget = document.getElementById('netomiChatWindow');
 
-      var s = document.getElementsByTagName('script')[0] || document.body;
-      s.parentNode.insertBefore(ns, s);
+      if (widget) {
+        clearInterval(checkInterval);
+        console.log("Widget iframe detected");
 
-      ns.onload = function () {
+        trackWidget(widget);
+      }
+    }, 500);
+  }
 
-        if (window.NETOMI_WEB_WIDGET) {
-          window.NETOMI_WEB_WIDGET.init(() => {
-            console.log("Widget initialized");
-          });
-        }
+  function trackWidget(widget) {
+    let lastState = null;
 
-        // 🔥 OBSERVE WIDGET DOM CHANGES
-        observeWidget();
-      };
+    const observer = new MutationObserver(() => {
+      const style = window.getComputedStyle(widget);
 
-      function observeWidget() {
-        let lastState = "unknown";
+      const isVisible =
+        style.display !== "none" &&
+        style.visibility !== "hidden" &&
+        widget.offsetHeight > 0;
 
-        const observer = new MutationObserver(() => {
-          const widget = document.querySelector('iframe[src*="netomi"]');
-
-          if (!widget) return;
-
-          const style = window.getComputedStyle(widget);
-          const isVisible = style.display !== "none" && style.visibility !== "hidden";
-
-          if (isVisible && lastState !== "open") {
-            console.log('[EVENT] Widget opened (UI)');
-            lastState = "open";
-          }
-
-          if (!isVisible && lastState === "open") {
-            console.log('[EVENT] Widget closed/minimized (UI)');
-            lastState = "closed";
-          }
-        });
-
-        observer.observe(document.body, {
-          childList: true,
-          subtree: true,
-          attributes: true
-        });
+      if (isVisible && lastState !== "open") {
+        console.log('[EVENT] Widget opened');
+        lastState = "open";
       }
 
-    })();
-  </script>
+      if (!isVisible && lastState === "open") {
+        console.log('[EVENT] Widget minimized/closed');
+        lastState = "closed";
+      }
+    });
 
-</body>
-</html>
+    observer.observe(widget, {
+      attributes: true,
+      attributeFilter: ['style', 'class']
+    });
+  }
+
+})();
+</script>
