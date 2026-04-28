@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Netomi Widget Test</title>
+    <meta name="RATING" content="RTA-5042-1996-1400-1577-RTA" />
+</head>
+<body>
+
+    <button onclick="openSupport()">Support</button>
+
+    <script>
+      function openSupport() {
+        if (window.Netomi && Netomi.chat) {
+          Netomi.chat.openWidget();
+        } else {
+          console.warn("Netomi widget not loaded yet.");
+        }
+      }
+
+      (function() {
+        var ns = document.createElement('script');
+        ns.src = 'https://chatapps-qa-a.netomi.com/app/script.js';
+        ns.type = 'text/javascript';
+        ns.async = true;
+
+        // Required attributes
+        ns.setAttribute('botRefId', 'a5addd98-2627-437b-899c-2f97ff2e2b18');
+        ns.setAttribute('enableEventQueue', 'true');
+
+        // Insert script safely
+        var s = document.getElementsByTagName('script')[0] || document.body;
+        s.parentNode.insertBefore(ns, s);
+
+        ns.onload = function () {
+
+          // Ensure Netomi exists before using
+          if (window.Netomi && Netomi.chat) {
+
+            // Handle new conversation event
+            Netomi.chat.onNewConversation(function(data) {
+              console.log('[ON_NEW_CONVERSATION] New conversation started! ConversationId:', data.conversationId);
+
+              setTimeout(function() {
+                console.log('[ON_NEW_CONVERSATION] Async work complete. Calling done() to unblock the widget.');
+                data.done(); // IMPORTANT
+              }, 1000);
+            });
+
+          } else {
+            console.error("Netomi.chat not available after script load.");
+          }
+
+          // Safe widget init
+          if (window.NETOMI_WEB_WIDGET) {
+            window.NETOMI_WEB_WIDGET.init(() => {
+              console.log("Widget initialized");
+            });
+          } else {
+            console.warn("NETOMI_WEB_WIDGET not found.");
+          }
+        };
+
+      })();
+    </script>
+
+</body>
+</html>
