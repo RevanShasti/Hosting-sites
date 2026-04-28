@@ -1,43 +1,80 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-    <meta name="RATING" content="RTA-5042-1996-1400-1577-RTA" />
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Netomi Widget Tracking</title>
 </head>
 <body>
 
-    <button onclick="Netomi.chat.openWidget()">Support</button>
+  <button onclick="openSupport()">Support</button>
 
-    <script>
-      (function() {
-        var ns = document.createElement('script');
-        ns.src = 'https://chatapps-qa-a.netomi.com/app/script.js';
-        ns.type = 'text/javascript';
-        ns.async = true;
+  <script>
+    function openSupport() {
+      if (window.Netomi && Netomi.chat) {
+        console.log('[EVENT] Widget opened');
+        Netomi.chat.openWidget();
+      } else {
+        console.warn("Netomi not loaded yet");
+      }
+    }
 
-        ns.setAttribute('botRefId', 'a5addd98-2627-437b-899c-2f97ff2e2b18');
-        ns.setAttribute("enableEventQueue", "true");
+    (function() {
+      var ns = document.createElement('script');
+      ns.src = 'https://chatapps-qa-a.netomi.com/app/script.js';
+      ns.async = true;
 
-        var s = document.getElementsByTagName('script')[0];
-        s.parentNode.insertBefore(ns, s);
+      ns.setAttribute('botRefId', 'a5addd98-2627-437b-899c-2f97ff2e2b18');
+      ns.setAttribute("enableEventQueue", "true");
 
-          function closeSupport() {
-  if (window.Netomi && Netomi.chat) {
-    console.log('[EVENT] Widget closed');
-    Netomi.chat.closeWidget();
-  }
-}
+      var s = document.getElementsByTagName('script')[0] || document.body;
+      s.parentNode.insertBefore(ns, s);
 
-        ns.onload = function () {
+      ns.onload = function () {
+
+        if (window.NETOMI_WEB_WIDGET) {
           window.NETOMI_WEB_WIDGET.init(() => {
-            /* add publish events here */
+            console.log("Widget initialized");
           });
-        };
-      })();
-    </script>
+        }
+
+        // 🔥 OBSERVE WIDGET DOM CHANGES
+        observeWidget();
+      };
+
+      function observeWidget() {
+        let lastState = "unknown";
+
+        const observer = new MutationObserver(() => {
+          const widget = document.querySelector('iframe[src*="netomi"]');
+
+          if (!widget) return;
+
+          const style = window.getComputedStyle(widget);
+          const isVisible = style.display !== "none" && style.visibility !== "hidden";
+
+          if (isVisible && lastState !== "open") {
+            console.log('[EVENT] Widget opened (UI)');
+            lastState = "open";
+          }
+
+          if (!isVisible && lastState === "open") {
+            console.log('[EVENT] Widget closed/minimized (UI)');
+            lastState = "closed";
+          }
+        });
+
+        observer.observe(document.body, {
+          childList: true,
+          subtree: true,
+          attributes: true
+        });
+      }
+
+    })();
+  </script>
 
 </body>
 </html>
