@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en-LU" data-market="lu-en" data-country="lu" data-lang="en" data-currency="EUR">
+<html>
 <head>
   <title></title>
 </head>
@@ -14,44 +14,69 @@
   function openWidget(source) {
     console.log(source);
     setVisitorInfo(source);
-    window.Netomi.chat.showWidget();
-    window.Netomi.chat.openWidget();
+    openwidget();
+    //const myTimeout = setTimeout(openwidget, 500);
+    
   }
-</script>
-<script type="text/javascript">
 
-var botRefId = "2be59370-0ce8-4fd7-8f6f-b1e6de2ea32d";
+  function openwidget() {
+    console.log('openwidget ');
+    Netomi.chat.openWidget();
+    var conversationInitiated = document.cookie.match(/(?:^|;\s*)net_conversationInitiated=([^;]+)/)?.[1];
+    console.log(conversationInitiated)
+    if(conversationInitiated == 'false') {
+          Netomi.chat.publish('SEND_MESSAGE_IN_WIDGET', {
+          text: "event://;SWITCH_INTENT;;TARGET_NODE::msgai.conversational.greetings.welcome",
+          label: "Welcome"
+      });
+   }
+    
+  }
 
-(function() {
+  function setVisitorInfo(button_source) {
+    window.NETOMI_WEB_WIDGET.publish('VISITOR_INFO', {
+        BUTTON_SOURCE: button_source
+    });
+  }
+
+  var botRefId = "a5addd98-2627-437b-899c-2f97ff2e2b18";
+
+
+  (function() {
     var ns = document.createElement("script");
     ns.src = "https://chatapps-qa-a.netomi.com/app/script.js";
     ns.type = "text/javascript";
     ns.async = true;
-    ns.setAttribute('enableEventQueue', 'true');
+ns.setAttribute('enableEventQueue', 'true');
     ns.setAttribute("botRefId", botRefId);
-  ns.setAttribute('hideOnInit', 'true');
     var s = document.getElementsByTagName("script")[0];
     s.parentNode.insertBefore(ns, s);
-    //ns.onload = function() {
-       // Netomi.chat.onLoad(() => {
-           // window.Netomi.chat.hideWidget();
-           // console.log('chat widget loaded');
-        //});
-    //     window.NETOMI_WEB_WIDGET.init(() => {
-    //         console.log('init')
-    //         setVisitorInfo();
-    //     });
-    // };
-})();
+    ns.onload = function() {
 
-function setVisitorInfo(button_source) {
-    console.log('button_source ',button_source);
-    
-    window.NETOMI_WEB_WIDGET.publish('VISITOR_INFO', {
-        CURRENT_TIME: new Date().toLocaleTimeString(),
-        BUTTON_SOURCE: button_source
-    });
-}
+      // Ensure Netomi exists before using
+          if (window.Netomi && Netomi.chat) {
+
+            // Handle new conversation event
+            Netomi.chat.onNewConversation(function(data) {
+              console.log('[ON_NEW_CONVERSATION] New conversation started! ConversationId:', data.conversationId);
+
+              setTimeout(function() {
+                console.log('[ON_NEW_CONVERSATION] Async work complete. Calling done() to unblock the widget.');
+                data.done(); // IMPORTANT
+              }, 1000);
+            });
+
+          } else {
+            console.error("Netomi.chat not available after script load.");
+          }
+
+        Netomi.chat.onLoad(() => {
+        });
+        window.NETOMI_WEB_WIDGET.init(() => {
+            setVisitorInfo('default');
+        });
+    };
+})();
 </script>
 <body>
 
