@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en-LU" data-market="lu-en" data-country="lu" data-lang="en" data-currency="EUR">
+<html lang="en">
 <head>
   <title>Netomi Test</title>
   <style>
@@ -12,24 +12,13 @@
 
 <body>
 
-<button onclick="initializeWidget()">Initialize Widget</button>
 <button onclick="openWidget('start_chat')">Start Chat</button>
-<button onclick="openWidget('call_us')">Call Us</button>
 
 <script>
 var botRefId = "a5addd98-2627-437b-899c-2f97ff2e2b18";
 
 let isSDKReady = false;
-
-function initializeWidget() {
-  if (!isSDKReady) {
-    console.warn("⏳ SDK not ready yet");
-    return;
-  }
-
-  console.log("🚀 Initializing widget...");
-  Netomi.chat.initializeWidget();
-}
+let isWidgetInitialized = false;
 
 function openWidget(source) {
   if (!isSDKReady) {
@@ -37,10 +26,14 @@ function openWidget(source) {
     return;
   }
 
-  console.log("Button clicked:", source);
+  if (!isWidgetInitialized) {
+    console.warn("⏳ Widget not initialized yet");
+    return;
+  }
+
+  console.log("🚀 Opening widget:", source);
 
   window.NETOMI_WEB_WIDGET.publish('VISITOR_INFO', {
-    CURRENT_TIME: new Date().toLocaleTimeString(),
     BUTTON_SOURCE: source
   });
 
@@ -50,7 +43,7 @@ function openWidget(source) {
 
 (function() {
   var ns = document.createElement("script");
-  ns.src = "https://chatapps-qa-a.netomi.com/app/script.js?v=" + Date.now(); // cache buster
+  ns.src = "https://chatapps-qa-a.netomi.com/app/script.js?v=" + Date.now();
   ns.async = true;
 
   ns.setAttribute("botRefId", botRefId);
@@ -65,30 +58,24 @@ function openWidget(source) {
     if (window.Netomi && Netomi.chat) {
       console.log("✅ Netomi.chat available");
 
-      // ✅ SDK readiness (THIS is the key)
+      // ✅ THIS is the real readiness signal
       Netomi.chat.onLoad(function () {
-        console.log("✅ SDK fully ready");
+        console.log("🔥 SDK fully ready (onLoad fired)");
+
         isSDKReady = true;
+
+        // 🔥 AUTO initialize (removes timing issue completely)
+        console.log("🚀 Auto initializing widget...");
+        Netomi.chat.initializeWidget();
+        isWidgetInitialized = true;
       });
 
-      // ✅ onNewConversation (FALSE CASE)
+      // ✅ FALSE CASE (no done)
       Netomi.chat.onNewConversation(function(data) {
-        console.log("🔥 New Conversation started");
-        console.log("ConversationId:", data.conversationId);
-
-        const startTime = Date.now();
-
-        // Optional trap (detect unexpected done)
-        const originalDone = data.done;
-        data.done = function() {
-          console.log("🚨 done() was CALLED unexpectedly");
-          originalDone();
-        };
+        console.log("🔥 New Conversation:", data.conversationId);
 
         setTimeout(function() {
-          console.log("⏱ Async work finished in", Date.now() - startTime, "ms");
-          console.log("❌ NOT calling done() → fallback (~2s should happen)");
-          // ❌ intentionally NOT calling data.done()
+          console.log("❌ NOT calling done() → fallback expected");
         }, 1000);
       });
 
