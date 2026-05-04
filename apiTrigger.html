@@ -12,27 +12,14 @@
 
 <body>
 
-<button onclick="setMode('success')">API Success</button>
-<button onclick="setMode('failure')">API Failure</button>
-<button onclick="setMode('slow')">API Slow</button>
-
-<button onclick="openWidget('start_chat')">Start Chat</button>
+<button id="startBtn" onclick="openWidget('start_chat')" disabled>
+  Start Chat
+</button>
 
 <script>
-let TEST_MODE = 'success';
 let isInitialized = false;
 
-function setMode(mode) {
-  TEST_MODE = mode;
-  console.log("🔁 Mode:", mode);
-}
-
 function openWidget(source) {
-  if (!isInitialized) {
-    console.warn("⏳ Widget not initialized yet");
-    return;
-  }
-
   console.log("🚀 Opening widget:", source);
 
   window.NETOMI_WEB_WIDGET.publish('VISITOR_INFO', {
@@ -59,35 +46,28 @@ var botRefId = "a5addd98-2627-437b-899c-2f97ff2e2b18";
 
     if (window.Netomi && Netomi.chat) {
 
-      // ✅ Conversation event
-      Netomi.chat.onNewConversation(function(data) {
-        console.log("🔥 New Conversation:", data.conversationId);
-        console.log("📡 Mode:", TEST_MODE);
-
-        simulateAPI(TEST_MODE)
-          .then(() => {
-            console.log("✅ API Success");
-
-            if (TEST_MODE === 'success') {
-              data.done();
-            }
-          })
-          .catch(() => {
-            console.log("❌ API Failed");
-            // no done → fallback
-          });
-      });
-
-      // ✅ THIS is the critical part
+      // 🔥 INIT (this is what matters)
       window.NETOMI_WEB_WIDGET.init(() => {
         console.log("✅ Widget initialized");
 
         isInitialized = true;
 
-        // Required first publish
+        // enable button now
+        document.getElementById("startBtn").disabled = false;
+
+        // required initial publish
         window.NETOMI_WEB_WIDGET.publish('VISITOR_INFO', {
           BUTTON_SOURCE: 'default'
         });
+      });
+
+      // 🔥 TEST EVENT
+      Netomi.chat.onNewConversation(function(data) {
+        console.log("🔥 New Conversation:", data.conversationId);
+
+        setTimeout(() => {
+          console.log("❌ NOT calling done() → fallback expected");
+        }, 1000);
       });
 
     } else {
@@ -95,24 +75,6 @@ var botRefId = "a5addd98-2627-437b-899c-2f97ff2e2b18";
     }
   };
 })();
-
-function simulateAPI(mode) {
-  return new Promise((resolve, reject) => {
-
-    if (mode === 'success') {
-      setTimeout(resolve, 1000);
-    }
-
-    else if (mode === 'failure') {
-      setTimeout(reject, 1000);
-    }
-
-    else if (mode === 'slow') {
-      setTimeout(resolve, 3000);
-    }
-
-  });
-}
 </script>
 
 </body>
