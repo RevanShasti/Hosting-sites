@@ -24,12 +24,6 @@
     Netomi.chat.openWidget();
     var conversationInitiated = document.cookie.match(/(?:^|;\s*)net_conversationInitiated=([^;]+)/)?.[1];
     console.log(conversationInitiated)
-    if(conversationInitiated == 'false') {
-          Netomi.chat.publish('SEND_MESSAGE_IN_WIDGET', {
-          text: "event://;SWITCH_INTENT;;TARGET_NODE::msgai.conversational.greetings.welcome",
-          label: "Welcome"
-      });
-   }
 
   }
 
