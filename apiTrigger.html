@@ -1,26 +1,5 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <title>API Test - Netomi</title>
-</head>
-
-<style>
-  button {
-    padding: 20px;
-    margin: 20px;
-  }
-</style>
-
-<body>
-
-<button onclick="setMode('success')">API Success</button>
-<button onclick="setMode('failure')">API Failure</button>
-<button onclick="setMode('slow')">API Slow</button>
-
-<button onclick="openWidget('start_chat')">Start Chat</button>
-
 <script>
-let TEST_MODE = 'success'; // default
+let TEST_MODE = 'success';
 
 function setMode(mode) {
   TEST_MODE = mode;
@@ -54,65 +33,59 @@ var botRefId = "a5addd98-2627-437b-899c-2f97ff2e2b18";
 
     if (window.Netomi && Netomi.chat) {
 
+      // ✅ EVENT
       Netomi.chat.onNewConversation(function(data) {
         console.log("🔥 New Conversation:", data.conversationId);
         console.log("📡 Mode:", TEST_MODE);
 
         const startTime = Date.now();
 
-        // 🚨 detect unexpected done()
-        const originalDone = data.done;
-        data.done = function() {
-          console.log("✅ done() CALLED at", Date.now() - startTime, "ms");
-          originalDone();
-        };
-
-        // 🔥 Simulated API call
         simulateAPI(TEST_MODE)
-          .then((res) => {
-            console.log("✅ API Success:", res);
+          .then(() => {
+            console.log("✅ API Success");
 
             if (TEST_MODE === 'success') {
-              data.done(); // ✅ only success calls done
+              data.done();
             }
-
           })
-          .catch((err) => {
-            console.log("❌ API Failed:", err);
-            // ❌ no done() → fallback
+          .catch(() => {
+            console.log("❌ API Failed");
           });
 
       });
 
+      // ✅ IMPORTANT: INIT PROPERLY
+      window.NETOMI_WEB_WIDGET.init(() => {
+        console.log("✅ Widget initialized");
+
+        // 🔥 THIS FIXES YOUR TIMEOUT ISSUE
+        window.NETOMI_WEB_WIDGET.publish('VISITOR_INFO', {
+          BUTTON_SOURCE: 'default'
+        });
+      });
+
+    } else {
+      console.error("Netomi not available");
     }
 
-    window.NETOMI_WEB_WIDGET.init(() => {
-      console.log("Widget initialized");
-    });
   };
-
 })();
 
-
-// 🔥 API Simulator
 function simulateAPI(mode) {
   return new Promise((resolve, reject) => {
 
     if (mode === 'success') {
-      setTimeout(() => resolve("OK"), 1000);
+      setTimeout(() => resolve(), 1000);
     }
 
     else if (mode === 'failure') {
-      setTimeout(() => reject("API ERROR"), 1000);
+      setTimeout(() => reject(), 1000);
     }
 
     else if (mode === 'slow') {
-      setTimeout(() => resolve("LATE RESPONSE"), 3000); // > 2s timeout
+      setTimeout(() => resolve(), 3000);
     }
 
   });
 }
 </script>
-
-</body>
-</html>
