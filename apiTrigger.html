@@ -1,13 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Netomi API Test</title>
+  <style>
+    button {
+      padding: 20px;
+      margin: 20px;
+    }
+  </style>
+</head>
+
+<body>
+
+<button onclick="setMode('success')">API Success</button>
+<button onclick="setMode('failure')">API Failure</button>
+<button onclick="setMode('slow')">API Slow</button>
+
+<button onclick="openWidget('start_chat')">Start Chat</button>
+
 <script>
 let TEST_MODE = 'success';
+let isInitialized = false;
 
 function setMode(mode) {
   TEST_MODE = mode;
-  console.log("🔁 Test mode set to:", mode);
+  console.log("🔁 Mode:", mode);
 }
 
 function openWidget(source) {
-  console.log("Opening widget:", source);
+  if (!isInitialized) {
+    console.warn("⏳ Widget not initialized yet");
+    return;
+  }
+
+  console.log("🚀 Opening widget:", source);
 
   window.NETOMI_WEB_WIDGET.publish('VISITOR_INFO', {
     BUTTON_SOURCE: source
@@ -23,22 +49,20 @@ var botRefId = "a5addd98-2627-437b-899c-2f97ff2e2b18";
   ns.src = "https://chatapps-qa-a.netomi.com/app/script.js?v=" + Date.now();
   ns.async = true;
 
-  ns.setAttribute('enableEventQueue', 'true');
   ns.setAttribute("botRefId", botRefId);
+  ns.setAttribute("enableEventQueue", "true");
 
-  var s = document.getElementsByTagName("script")[0];
-  s.parentNode.insertBefore(ns, s);
+  document.body.appendChild(ns);
 
   ns.onload = function() {
+    console.log("✅ Script loaded");
 
     if (window.Netomi && Netomi.chat) {
 
-      // ✅ EVENT
+      // ✅ Conversation event
       Netomi.chat.onNewConversation(function(data) {
         console.log("🔥 New Conversation:", data.conversationId);
         console.log("📡 Mode:", TEST_MODE);
-
-        const startTime = Date.now();
 
         simulateAPI(TEST_MODE)
           .then(() => {
@@ -50,24 +74,25 @@ var botRefId = "a5addd98-2627-437b-899c-2f97ff2e2b18";
           })
           .catch(() => {
             console.log("❌ API Failed");
+            // no done → fallback
           });
-
       });
 
-      // ✅ IMPORTANT: INIT PROPERLY
+      // ✅ THIS is the critical part
       window.NETOMI_WEB_WIDGET.init(() => {
         console.log("✅ Widget initialized");
 
-        // 🔥 THIS FIXES YOUR TIMEOUT ISSUE
+        isInitialized = true;
+
+        // Required first publish
         window.NETOMI_WEB_WIDGET.publish('VISITOR_INFO', {
           BUTTON_SOURCE: 'default'
         });
       });
 
     } else {
-      console.error("Netomi not available");
+      console.error("❌ Netomi not available");
     }
-
   };
 })();
 
@@ -75,17 +100,20 @@ function simulateAPI(mode) {
   return new Promise((resolve, reject) => {
 
     if (mode === 'success') {
-      setTimeout(() => resolve(), 1000);
+      setTimeout(resolve, 1000);
     }
 
     else if (mode === 'failure') {
-      setTimeout(() => reject(), 1000);
+      setTimeout(reject, 1000);
     }
 
     else if (mode === 'slow') {
-      setTimeout(() => resolve(), 3000);
+      setTimeout(resolve, 3000);
     }
 
   });
 }
 </script>
+
+</body>
+</html>
