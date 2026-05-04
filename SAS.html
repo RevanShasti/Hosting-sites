@@ -53,6 +53,8 @@ ns.setAttribute('enableEventQueue', 'true');
     s.parentNode.insertBefore(ns, s);
     ns.onload = function() {
 
+      var SHOULD_CALL_DONE = false; // 👈 force FALSE case
+
       // Ensure Netomi exists before using
           if (window.Netomi && Netomi.chat) {
 
@@ -62,7 +64,14 @@ ns.setAttribute('enableEventQueue', 'true');
 
               setTimeout(function() {
                 console.log('[ON_NEW_CONVERSATION] Async work complete. Calling done() to unblock the widget.');
-                data.done(); // IMPORTANT
+                //data.done(); // IMPORTANT
+                 if (SHOULD_CALL_DONE) {
+      console.log('✅ Calling done()');
+      data.done();
+    } else {
+      console.log('❌ NOT calling done() — waiting for timeout fallback');
+      // DO NOTHING
+    }
               }, 1000);
             });
 
