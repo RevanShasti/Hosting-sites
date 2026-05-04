@@ -44,6 +44,16 @@
 
       ns.onload = function () {
 
+         // ✅ Initialize widget FIRST
+        if (window.NETOMI_WEB_WIDGET) {
+          window.NETOMI_WEB_WIDGET.init(() => {
+            console.log("✅ Widget initialized");
+            isWidgetReady = true;
+          });
+        } else {
+          console.warn("❌ NETOMI_WEB_WIDGET not found");
+        }
+
         console.log("✅ Netomi script loaded");
 
         // 🔁 Toggle this
@@ -81,16 +91,6 @@
 
         } else {
           console.error("❌ Netomi.chat not available");
-        }
-
-        // ✅ Initialize widget FIRST
-        if (window.NETOMI_WEB_WIDGET) {
-          window.NETOMI_WEB_WIDGET.init(() => {
-            console.log("✅ Widget initialized");
-            isWidgetReady = true;
-          });
-        } else {
-          console.warn("❌ NETOMI_WEB_WIDGET not found");
         }
 
       };
