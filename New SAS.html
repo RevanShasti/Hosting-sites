@@ -15,14 +15,14 @@
 
 <body>
 
-  <button onclick="openWidget()">Start Chat</button>
+  <button id="startBtn" onclick="openWidget()" disabled>Start Chat</button>
 
   <script>
     var isChatReady = false;
 
     function openWidget() {
       if (!isChatReady) {
-        console.warn("⏳ Chat not ready yet (onLoad not fired)");
+        console.warn("⏳ Chat not ready yet");
         return;
       }
 
@@ -51,13 +51,17 @@
 
           console.log("✅ Netomi.chat available");
 
-          // ✅ THIS is the real readiness signal
+          // ✅ TRUE readiness signal
           Netomi.chat.onLoad(function () {
-            console.log("✅ Netomi.chat fully READY (onLoad fired)");
+            console.log("✅ Chat fully READY");
+
             isChatReady = true;
+
+            // 🔓 Enable button
+            document.getElementById("startBtn").disabled = false;
           });
 
-          // ✅ Your test logic
+          // ✅ done() test logic
           Netomi.chat.onNewConversation(function (data) {
 
             console.log("🔥 NEW CONVERSATION EVENT");
@@ -77,7 +81,7 @@
                 console.log("✅ Calling done()");
                 data.done();
               } else {
-                console.log("❌ NOT calling done() — waiting for fallback (~2s)");
+                console.log("❌ NOT calling done() — waiting fallback (~2s)");
               }
 
             }, 1000);
@@ -88,10 +92,9 @@
           console.error("❌ Netomi.chat not available");
         }
 
-        // Init widget
         if (window.NETOMI_WEB_WIDGET) {
           window.NETOMI_WEB_WIDGET.init(() => {
-            console.log("✅ Widget init called");
+            console.log("✅ Widget init triggered");
           });
         }
 
