@@ -1,99 +1,96 @@
-<script>
+<!DOCTYPE html>
+<html lang="en-LU" data-market="lu-en" data-country="lu" data-lang="en" data-currency="EUR">
+<head>
+  <title></title>
+</head>
+
+<style type="text/css">
+  button {
+    padding: 20px;
+    margin: 50px;
+  }
+</style>
+
+<script type="text/javascript">
+  function openWidget(source) {
+    console.log("Button clicked:", source);
+    setVisitorInfo(source);
+
+    window.Netomi.chat.showWidget();
+    window.Netomi.chat.openWidget();
+  }
+
+  function initializeWidget() {
+    console.log("Initializing widget...");
+    window.Netomi.chat.initializeWidget();
+  }
+</script>
+
+<script type="text/javascript">
+var botRefId = "a5addd98-2627-437b-899c-2f97ff2e2b18";
+
 (function() {
-  var ns = document.createElement('script');
-  ns.src = 'https://chatapps-qa-a.netomi.com/app/script.js?v=' + Date.now(); // cache buster
-  ns.async = true;
+    var ns = document.createElement("script");
+    ns.src = "https://chatapps-qa-a.netomi.com/app/script.js?v=" + Date.now(); // cache buster
+    ns.type = "text/javascript";
+    ns.async = true;
 
-  ns.setAttribute('botRefId', 'a5addd98-2627-437b-899c-2f97ff2e2b18');
-  ns.setAttribute("enableEventQueue", "true");
+    ns.setAttribute('enableEventQueue', 'true');
+    ns.setAttribute("botRefId", botRefId);
+    ns.setAttribute('hideOnInit', 'true');
 
-  var s = document.getElementsByTagName('script')[0] || document.body;
-  s.parentNode.insertBefore(ns, s);
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(ns, s);
 
-  ns.onload = function () {
-    console.log("Widget script loaded");
+    ns.onload = function() {
+        console.log("✅ Netomi script loaded");
 
-    // ✅ Register event BEFORE init
-    if (window.Netomi && Netomi.chat) {
+        if (window.Netomi && Netomi.chat) {
+            console.log("✅ Netomi.chat available");
 
-      Netomi.chat.onNewConversation(function(data) {
-        console.log('[ON_NEW_CONVERSATION] New conversation started! ConversationId:', data.conversationId);
+            // 🔥 ADDING onNewConversation (FALSE CASE)
+            Netomi.chat.onNewConversation(function(data) {
+                console.log("[ON_NEW_CONVERSATION] New conversation started!");
+                console.log("ConversationId:", data.conversationId);
 
-        const startTime = Date.now();
+                const startTime = Date.now();
 
-        // 🚨 Trap to detect if SDK calls done() internally
-        const originalDone = data.done;
-        data.done = function() {
-          console.log('🚨 done() was CALLED (unexpected)');
-          originalDone();
-        };
+                // 🚨 Trap to detect unexpected done() calls
+                const originalDone = data.done;
+                data.done = function() {
+                    console.log("🚨 done() was CALLED unexpectedly");
+                    originalDone();
+                };
 
-        setTimeout(function() {
-          console.log('[ON_NEW_CONVERSATION] Async work complete after', Date.now() - startTime, 'ms');
+                setTimeout(function() {
+                    console.log("[ON_NEW_CONVERSATION] Async work finished in", Date.now() - startTime, "ms");
 
-          console.log('❌ NOT calling done() → waiting for fallback (~2s)');
-          // 🔥 INTENTIONALLY NOT CALLING data.done()
+                    console.log("❌ NOT calling done() → waiting for fallback (~2s)");
+                    // ❌ intentionally NOT calling data.done()
 
-        }, 1000);
-      });
+                }, 1000);
+            });
 
-    } else {
-      console.error("Netomi.chat not available");
-    }
-
-    // ✅ Init widget
-    if (window.NETOMI_WEB_WIDGET) {
-      window.NETOMI_WEB_WIDGET.init(() => {
-        console.log("Widget initialized");
-      });
-    } else {
-      console.error("NETOMI_WEB_WIDGET not available");
-    }
-
-    // Continue your existing logic
-    waitForWidget();
-  };
-
-  function waitForWidget() {
-    const checkInterval = setInterval(() => {
-      const widget = document.getElementById('netomiChatWindow');
-
-      if (widget) {
-        clearInterval(checkInterval);
-        console.log("Widget iframe detected");
-
-        trackWidget(widget);
-      }
-    }, 500);
-  }
-
-  function trackWidget(widget) {
-    let lastState = null;
-
-    const observer = new MutationObserver(() => {
-      const style = window.getComputedStyle(widget);
-
-      const isVisible =
-        style.display !== "none" &&
-        style.visibility !== "hidden" &&
-        widget.offsetHeight > 0;
-
-      if (isVisible && lastState !== "open") {
-        console.log('[EVENT] Widget opened');
-        lastState = "open";
-      }
-
-      if (!isVisible && lastState === "open") {
-        console.log('[EVENT] Widget minimized/closed');
-        lastState = "closed";
-      }
-    });
-
-    observer.observe(widget, {
-      attributes: true,
-      attributeFilter: ['style', 'class']
-    });
-  }
+        } else {
+            console.error("❌ Netomi.chat not available");
+        }
+    };
 
 })();
+
+function setVisitorInfo(button_source) {
+    console.log('button_source', button_source);
+
+    window.NETOMI_WEB_WIDGET.publish('VISITOR_INFO', {
+        CURRENT_TIME: new Date().toLocaleTimeString(),
+        BUTTON_SOURCE: button_source
+    });
+}
 </script>
+
+<body>
+  <button onclick="openWidget('start_chat')">Start Chat</button>
+  <button onclick="openWidget('call_us')">Call Us</button>
+  <button onclick="initializeWidget()">Initialize Widget</button>
+</body>
+</html>
