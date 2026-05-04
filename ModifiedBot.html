@@ -30,23 +30,37 @@
         ns.setAttribute('botRefId', 'a5addd98-2627-437b-899c-2f97ff2e2b18');
         ns.setAttribute('enableEventQueue', 'true');
 
+        // 🔁 TOGGLE THIS TO TEST BEHAVIOR
+        // true  → done() is called
+        // false → done() is NOT called (timeout fallback ~2s)
+        var SHOULD_CALL_DONE = true;
+
         // Insert script safely
         var s = document.getElementsByTagName('script')[0] || document.body;
         s.parentNode.insertBefore(ns, s);
 
         ns.onload = function () {
 
-          // Ensure Netomi exists before using
           if (window.Netomi && Netomi.chat) {
 
-            // Handle new conversation event
             Netomi.chat.onNewConversation(function(data) {
-              console.log('[ON_NEW_CONVERSATION] New conversation started! ConversationId:', data.conversationId);
+
+              console.log('[ON_NEW_CONVERSATION] Started:', data.conversationId);
+              console.log('Start Time:', new Date().toISOString());
 
               setTimeout(function() {
-                console.log('[ON_NEW_CONVERSATION] Async work complete. Calling done() to unblock the widget.');
-                data.done(); // IMPORTANT
-              }, 1000);
+                console.log('[ON_NEW_CONVERSATION] Async work finished at:', new Date().toISOString());
+
+                if (SHOULD_CALL_DONE) {
+                  console.log('✅ Calling done() → Widget should proceed immediately');
+                  data.done();
+                } else {
+                  console.log('⏳ NOT calling done() → Widget should proceed after ~2s timeout');
+                  // intentionally not calling data.done()
+                }
+
+              }, 1000); // simulate API delay
+
             });
 
           } else {
