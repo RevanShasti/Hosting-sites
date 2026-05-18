@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Netomi Debug</title>
+    <title>Netomi Widget Auto Close</title>
 </head>
 
 <body>
 
 <button onclick="Netomi.chat.openWidget()">
-    Open Widget
+    Support
 </button>
 
 <script>
@@ -34,36 +34,30 @@
 
             console.log("Widget initialized");
 
-            // 1. Listen for possible custom widget events
-            window.addEventListener("*", function (e) {
-                console.log("Wildcard Event:", e);
-            });
-
-            // 2. Listen for postMessage events
             window.addEventListener("message", function(event) {
 
-                console.log("=================================");
-                console.log("WINDOW MESSAGE RECEIVED");
-                console.log("Origin:", event.origin);
-                console.log("Data:", event.data);
-                console.log("=================================");
+                const eventType = event?.data?.event?.eventType;
 
-            });
+                if (!eventType) return;
 
-            // 3. Poll possible Netomi event queue
-            setInterval(() => {
+                console.log("Netomi Event:", eventType);
 
-                if (window.NETOMI_EVENT_QUEUE) {
+                const closeEvents = [
+                    "SURVEY_SKIPPED",
+                    "SURVEY_SUBMITTED",
+                    "END_CHAT_PILL"
+                ];
+
+                if (closeEvents.includes(eventType)) {
+
                     console.log(
-                        "NETOMI_EVENT_QUEUE:",
-                        window.NETOMI_EVENT_QUEUE
+                        eventType + " detected -> closing widget"
                     );
+
+                    window.Netomi.chat.closeWidget();
                 }
 
-            }, 2000);
-
-            // 4. Inspect Netomi object
-            console.log("Netomi Object:", window.Netomi);
+            });
 
         });
 
