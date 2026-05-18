@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Netomi Widget Event Logger</title>
+    <meta name="RATING" content="RTA-5042-1996-1400-1577-RTA" />
+</head>
+
+<body>
+
+    <button onclick="Netomi.chat.openWidget()">
+        Support
+    </button>
+
+    <script>
+        (function () {
+
+            var ns = document.createElement('script');
+            ns.src = 'https://chatapps-qa-a.netomi.com/app/script.js';
+            ns.type = 'text/javascript';
+            ns.async = true;
+
+            ns.setAttribute('botRefId', '07980c42-8628-4c0f-8c91-2590abf8e5ab');
+            ns.setAttribute('enableEventQueue', 'true');
+
+            var s = document.getElementsByTagName('script')[0];
+            s.parentNode.insertBefore(ns, s);
+
+            ns.onload = function () {
+
+                console.log("Netomi script loaded");
+
+                window.NETOMI_WEB_WIDGET.init(() => {
+
+                    console.log("Widget initialized");
+
+                    // Generic Event Logger
+                    window.addEventListener("netomiWidgetEvent", function (event) {
+
+                        console.log("====================================");
+                        console.log("Netomi Widget Event Detected");
+                        console.log("Full Event Object:", event);
+                        console.log("Event Detail:", event.detail);
+
+                        if (event.detail) {
+                            console.log("Event Name:", event.detail.eventName);
+                        }
+
+                        console.log("====================================");
+                    });
+
+                });
+            };
+
+        })();
+    </script>
+
+</body>
+</html>
