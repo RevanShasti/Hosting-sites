@@ -2,60 +2,75 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Netomi Widget Event Logger</title>
-    <meta name="RATING" content="RTA-5042-1996-1400-1577-RTA" />
+    <title>Netomi Debug</title>
 </head>
 
 <body>
 
-    <button onclick="Netomi.chat.openWidget()">
-        Support
-    </button>
+<button onclick="Netomi.chat.openWidget()">
+    Open Widget
+</button>
 
-    <script>
-        (function () {
+<script>
+(function () {
 
-            var ns = document.createElement('script');
-            ns.src = 'https://chatapps-qa-a.netomi.com/app/script.js';
-            ns.type = 'text/javascript';
-            ns.async = true;
+    var ns = document.createElement('script');
+    ns.src = 'https://chatapps-qa-a.netomi.com/app/script.js';
+    ns.type = 'text/javascript';
+    ns.async = true;
 
-            ns.setAttribute('botRefId', '07980c42-8628-4c0f-8c91-2590abf8e5ab');
-            ns.setAttribute('enableEventQueue', 'true');
+    ns.setAttribute('botRefId', '07980c42-8628-4c0f-8c91-2590abf8e5ab');
+    ns.setAttribute('enableEventQueue', 'true');
 
-            var s = document.getElementsByTagName('script')[0];
-            s.parentNode.insertBefore(ns, s);
+    var s = document.getElementsByTagName('script')[0];
+    s.parentNode.insertBefore(ns, s);
 
-            ns.onload = function () {
+    ns.onload = function () {
 
-                console.log("Netomi script loaded");
+        console.log("Netomi script loaded");
 
-                window.NETOMI_WEB_WIDGET.init(() => {
+        window.NETOMI_WEB_WIDGET.init(() => {
 
-                    console.log("Widget initialized");
+            console.log("Widget initialized");
 
-                    // Generic Event Logger
-                    window.addEventListener("netomiWidgetEvent", function (event) {
+            // 1. Listen for possible custom widget events
+            window.addEventListener("*", function (e) {
+                console.log("Wildcard Event:", e);
+            });
 
-                        console.log("====================================");
-                        console.log("Netomi Widget Event Detected");
-                        console.log("Full Event Object:", event);
-                        console.log("Event Detail:", event.detail);
+            // 2. Listen for postMessage events
+            window.addEventListener("message", function(event) {
 
-                        if (event.detail) {
-                            console.log("Event Name:", event.detail.eventName);
-                        }
+                console.log("=================================");
+                console.log("WINDOW MESSAGE RECEIVED");
+                console.log("Origin:", event.origin);
+                console.log("Data:", event.data);
+                console.log("=================================");
 
-                        console.log("====================================");
-                    });
+            });
 
-                });
-            };
+            // 3. Poll possible Netomi event queue
+            setInterval(() => {
 
-        })();
-    </script>
+                if (window.NETOMI_EVENT_QUEUE) {
+                    console.log(
+                        "NETOMI_EVENT_QUEUE:",
+                        window.NETOMI_EVENT_QUEUE
+                    );
+                }
+
+            }, 2000);
+
+            // 4. Inspect Netomi object
+            console.log("Netomi Object:", window.Netomi);
+
+        });
+
+    };
+
+})();
+</script>
 
 </body>
 </html>
