@@ -49,7 +49,7 @@
         headers: { 
           'href':'https://revanshasti.github.io/Hosting-sites/Authentication.html',
           'Content-Type': 'application/json', 
-          'x-token-expiry': '1h', 
+          'x-token-expiry': '2m', 
           'x-bot-ref-id':'f8997270-9f62-4315-9de9-d743e587d5bb', 
           'x-user-details': JSON.stringify({"name": "Revan Shasti", "externalId": "revan@gmail.com"}) 
         }
@@ -76,7 +76,7 @@
           const tokenResp = await tokenApiCall.json();
           sendTokenToNetomi(tokenResp, renewToken);
         })      
-      }, 3300000);
+      }, 90000);
     }
 
     function endAuth() {
