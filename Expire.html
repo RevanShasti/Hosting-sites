@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -8,107 +9,82 @@
 </head>
 
 <body>
-  <button onclick="handleAuth()">Start Authentication</button>
-  <button onclick="endAuth()">Clear Authentication</button>
-</body>
-<script>
 
-   // LOAD WIDGET
-  (function () {
+  <button onclick="handleAuth()">
+    Start Authentication
+  </button>
 
-    var ns = document.createElement('script');
+  <button onclick="endAuth()">
+    Clear Authentication
+  </button>
 
-    ns.src = 'https://chatapps-qa-a.netomi.com/app/script.js';
-    ns.type = 'text/javascript';
-    ns.async = true;
+  <script>
 
-    ns.setAttribute(
-      'botRefId',
-      'a5addd98-2627-437b-899c-2f97ff2e2b18'
-    );
+    // LOAD NETOMI WIDGET
+    (function () {
 
-    var s = document.getElementsByTagName('script')[0];
+      var ns = document.createElement('script');
 
-    s.parentNode.insertBefore(ns, s);
+      ns.src = 'https://chatapps-qa-a.netomi.com/app/script.js';
+      ns.type = 'text/javascript';
+      ns.async = true;
 
-    ns.onload = function () {
+      ns.setAttribute(
+        'botRefId',
+        'a5addd98-2627-437b-899c-2f97ff2e2b18'
+      );
 
-      console.log('Widget script loaded');
+      var s = document.getElementsByTagName('script')[0];
 
-      window.NETOMI_WEB_WIDGET.init(() => {
-        console.log('Widget initialized');
-      });
-    };
+      s.parentNode.insertBefore(ns, s);
 
-  })();
-  
-  let tokenExpired = false;
+      ns.onload = function () {
 
-  async function handleAuth() {
+        console.log('Widget script loaded');
 
-    const tokenApiCall = await fetch(
-      'https://chatapps-qa-a.netomi.com/api/fetchJWT',
-      {
-        method: 'post',
-        headers: {
-          'href':
-            'https://revanshasti.github.io/Hosting-sites/Authentication.html',
-          'Content-Type': 'application/json',
-          'x-token-expiry': '2m',
-          'x-bot-ref-id':
-            'a5addd98-2627-437b-899c-2f97ff2e2b18',
-          'x-user-details': JSON.stringify({
-            name: 'Revan Shasti',
-            externalId: 'revan@gmail.com'
-          })
-        }
-      }
-    );
+        window.NETOMI_WEB_WIDGET.init(() => {
 
-    const { token } = await tokenApiCall.json();
+          console.log('Widget initialized');
 
-    window.NETOMI_WEB_WIDGET.authModule.login(token);
+        });
+      };
 
-    console.log('Authenticated successfully');
+    })();
 
-    // AFTER 2 MINUTES MARK TOKEN AS EXPIRED
-    setTimeout(() => {
-      tokenExpired = true;
-      console.log('Token officially expired');
-    }, 120000);
 
-    // Widget attempts token refresh
-    window.NETOMI_WEB_WIDGET.authModule.jwtAuth(
-      async sendTokenToNetomi => {
+    let tokenExpired = false;
 
-        console.log('Widget requested token refresh');
 
-        // SIMULATE EXPIRED TOKEN FAILURE
-        if (tokenExpired) {
+    async function handleAuth() {
 
-          console.error('Token expired - session failed');
+      try {
 
-          // send invalid token / no token
-          sendTokenToNetomi(
-            { token: null },
-            null
-          );
+        // CHECK IF WIDGET IS READY
+        if (!window.NETOMI_WEB_WIDGET) {
+
+          console.error('Widget not initialized yet');
 
           return;
         }
 
-        // BEFORE EXPIRY -> NORMAL TOKEN
-        const refreshCall = await fetch(
+        console.log('Fetching JWT token...');
+
+        // INITIAL TOKEN CALL
+        const tokenApiCall = await fetch(
           'https://chatapps-qa-a.netomi.com/api/fetchJWT',
           {
-            method: 'post',
+            method: 'POST',
             headers: {
               'href':
                 'https://revanshasti.github.io/Hosting-sites/Authentication.html',
+
               'Content-Type': 'application/json',
+
               'x-token-expiry': '2m',
+
               'x-bot-ref-id':
                 'a5addd98-2627-437b-899c-2f97ff2e2b18',
+
               'x-user-details': JSON.stringify({
                 name: 'Revan Shasti',
                 externalId: 'revan@gmail.com'
@@ -117,11 +93,80 @@
           }
         );
 
-        const tokenResp = await refreshCall.json();
+        const { token } = await tokenApiCall.json();
 
-        sendTokenToNetomi(tokenResp);
+        console.log('JWT token received');
+
+        // LOGIN USER
+        window.NETOMI_WEB_WIDGET.authModule.login(token);
+
+        console.log('User authenticated successfully');
+
+
+
+        // TOKEN EXPIRES AFTER 2 MINUTES
+        setTimeout(() => {
+
+          tokenExpired = true;
+
+          console.error('Token expired after 2 minutes');
+
+
+
+          // REGISTER FAILED TOKEN REFRESH
+          window.NETOMI_WEB_WIDGET.authModule.jwtAuth(
+            async sendTokenToNetomi => {
+
+              console.error(
+                'Widget requested token refresh after expiry'
+              );
+
+              console.error(
+                'Session failed because token is expired'
+              );
+
+              // SEND INVALID TOKEN
+              sendTokenToNetomi({
+                token: null
+              });
+
+            }
+          );
+
+        }, 120000);
+
+      } catch (error) {
+
+        console.error(
+          'Authentication failed:',
+          error
+        );
+
       }
-    );
-  }
-</script>
+    }
+
+
+
+    function endAuth() {
+
+      try {
+
+        window.NETOMI_WEB_WIDGET.authModule.logout();
+
+        console.log('User logged out');
+
+      } catch (error) {
+
+        console.error(
+          'Logout failed:',
+          error
+        );
+
+      }
+    }
+
+  </script>
+
+</body>
+
 </html>
