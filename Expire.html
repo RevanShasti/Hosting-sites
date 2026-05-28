@@ -11,25 +11,8 @@
   <button onclick="handleAuth()">Start Authentication</button>
   <button onclick="endAuth()">Clear Authentication</button>
 </body>
-
 <script>
-  (function () {
-    var ns = document.createElement('script');
-    ns.src = 'https://chatapps-qa-a.netomi.com/app/script.js';
-    ns.type = 'text/javascript';
-    ns.async = true;
-    ns.setAttribute(
-      'botRefId',
-      'a5addd98-2627-437b-899c-2f97ff2e2b18'
-    );
-
-    var s = document.getElementsByTagName('script')[0];
-    s.parentNode.insertBefore(ns, s);
-
-    ns.onload = function () {
-      window.NETOMI_WEB_WIDGET.init(() => {});
-    };
-  })();
+  let tokenExpired = false;
 
   async function handleAuth() {
 
@@ -54,21 +37,61 @@
 
     const { token } = await tokenApiCall.json();
 
-    console.log('Token received');
-    console.log('Session will expire in 2 minutes');
-
-    // Login only once
     window.NETOMI_WEB_WIDGET.authModule.login(token);
 
-    // Optional: log expiry moment
-    setTimeout(() => {
-      console.log('Token expired now');
-    }, 120000);
-  }
+    console.log('Authenticated successfully');
 
-  function endAuth() {
-    window.NETOMI_WEB_WIDGET.authModule.logout();
-    console.log('Authentication cleared');
+    // AFTER 2 MINUTES MARK TOKEN AS EXPIRED
+    setTimeout(() => {
+      tokenExpired = true;
+      console.log('Token officially expired');
+    }, 120000);
+
+    // Widget attempts token refresh
+    window.NETOMI_WEB_WIDGET.authModule.jwtAuth(
+      async sendTokenToNetomi => {
+
+        console.log('Widget requested token refresh');
+
+        // SIMULATE EXPIRED TOKEN FAILURE
+        if (tokenExpired) {
+
+          console.error('Token expired - session failed');
+
+          // send invalid token / no token
+          sendTokenToNetomi(
+            { token: null },
+            null
+          );
+
+          return;
+        }
+
+        // BEFORE EXPIRY -> NORMAL TOKEN
+        const refreshCall = await fetch(
+          'https://chatapps-qa-a.netomi.com/api/fetchJWT',
+          {
+            method: 'post',
+            headers: {
+              'href':
+                'https://revanshasti.github.io/Hosting-sites/Authentication.html',
+              'Content-Type': 'application/json',
+              'x-token-expiry': '2m',
+              'x-bot-ref-id':
+                'a5addd98-2627-437b-899c-2f97ff2e2b18',
+              'x-user-details': JSON.stringify({
+                name: 'Revan Shasti',
+                externalId: 'revan@gmail.com'
+              })
+            }
+          }
+        );
+
+        const tokenResp = await refreshCall.json();
+
+        sendTokenToNetomi(tokenResp);
+      }
+    );
   }
 </script>
 </html>
