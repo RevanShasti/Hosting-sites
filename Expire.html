@@ -5,7 +5,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta http-equiv="X-UA-Compatible" content="IE=Standards" />
-  <title>Web Chat</title>
+  <title>JWT Expiry Test</title>
 </head>
 
 <body>
@@ -26,7 +26,9 @@
       var ns = document.createElement('script');
 
       ns.src = 'https://chatapps-qa-a.netomi.com/app/script.js';
+
       ns.type = 'text/javascript';
+
       ns.async = true;
 
       ns.setAttribute(
@@ -47,39 +49,33 @@
           console.log('Widget initialized');
 
         });
+
       };
 
     })();
 
 
-    let tokenExpired = false;
 
-
+    // LOGIN WITH 2 MINUTE TOKEN
     async function handleAuth() {
 
       try {
 
-        // CHECK IF WIDGET IS READY
-        if (!window.NETOMI_WEB_WIDGET) {
-
-          console.error('Widget not initialized yet');
-
-          return;
-        }
-
         console.log('Fetching JWT token...');
 
-        // INITIAL TOKEN CALL
         const tokenApiCall = await fetch(
           'https://chatapps-qa-a.netomi.com/api/fetchJWT',
           {
             method: 'POST',
+
             headers: {
+
               'href':
                 'https://revanshasti.github.io/Hosting-sites/Authentication.html',
 
               'Content-Type': 'application/json',
 
+              // TOKEN EXPIRES IN 2 MINUTES
               'x-token-expiry': '2m',
 
               'x-bot-ref-id':
@@ -89,53 +85,53 @@
                 name: 'Revan Shasti',
                 externalId: 'revan@gmail.com'
               })
+
             }
           }
         );
+
+
 
         const { token } = await tokenApiCall.json();
 
         console.log('JWT token received');
 
-        // LOGIN USER
+
+
+        // LOGIN ONLY ONCE
+        // NO TOKEN RENEWAL
+        // NO jwtAuth()
+        // NO setInterval()
+
         window.NETOMI_WEB_WIDGET.authModule.login(token);
 
-        console.log('User authenticated successfully');
+
+
+        console.log(
+          'User authenticated successfully'
+        );
 
 
 
-        // TOKEN EXPIRES AFTER 2 MINUTES
-        setTimeout(() => {
-
-          tokenExpired = true;
-
-          console.error('Token expired after 2 minutes');
+        console.log(
+          'Wait 2+ minutes and send a message in widget'
+        );
 
 
 
-          // REGISTER FAILED TOKEN REFRESH
-          window.NETOMI_WEB_WIDGET.authModule.jwtAuth(
-            async sendTokenToNetomi => {
+        console.log(
+          'Backend should throw JWT expired internally'
+        );
 
-              console.error(
-                'Widget requested token refresh after expiry'
-              );
 
-              console.error(
-                'Session failed because token is expired'
-              );
 
-              // SEND INVALID TOKEN
-              sendTokenToNetomi({
-                token: null
-              });
+        console.log(
+          'Verify DataDog does NOT log jwt expired error'
+        );
 
-            }
-          );
+      }
 
-        }, 120000);
-
-      } catch (error) {
+      catch (error) {
 
         console.error(
           'Authentication failed:',
@@ -143,6 +139,7 @@
         );
 
       }
+
     }
 
 
@@ -155,7 +152,9 @@
 
         console.log('User logged out');
 
-      } catch (error) {
+      }
+
+      catch (error) {
 
         console.error(
           'Logout failed:',
@@ -163,6 +162,7 @@
         );
 
       }
+
     }
 
   </script>
