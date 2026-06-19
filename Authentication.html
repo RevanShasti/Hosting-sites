@@ -14,7 +14,7 @@
   <script>
     (function() {
       var ns = document.createElement('script');
-      ns.src = ('https://chatapps-qa-a.netomi.com/app/script.js');
+      ns.src = ('https://chatapps-qa-a.netomi.com&isDynamicEnv=true/app/script.js');
       ns.type = 'text/javascript';
       ns.async = true;
       ns.setAttribute('botRefId', 'ecfc2a6b-616f-4e6e-bf64-843cdf3b16c');
@@ -30,7 +30,7 @@
     async function handleAuth() {
 
       async function renewToken() {
-        const tokenApiCall = await fetch('https://chatapps-qa-a.netomi.com/api/fetchJWT',  {
+        const tokenApiCall = await fetch('https://chatapps-qa-a.netomi.com&isDynamicEnv=true/api/fetchJWT',  {
           method: 'post',
           headers: {
             'href':'https://revanshasti.github.io/Hosting-sites/Authentication.html',
@@ -44,7 +44,7 @@
         return token;
       }
     
-      const tokenApiCall = await fetch('https://chatapps-qa-a.netomi.com/api/fetchJWT',  {
+      const tokenApiCall = await fetch('https://chatapps-qa-a.netomi.com&isDynamicEnv=true/api/fetchJWT',  {
         method: 'post', 
         headers: { 
           'href':'https://revanshasti.github.io/Hosting-sites/Authentication.html',
@@ -62,7 +62,7 @@
       id = setInterval(() => {
         window.NETOMI_WEB_WIDGET.authModule.jwtAuth(async sendTokenToNetomi => {
           
-          const tokenApiCall = await fetch('https://chatapps-qa-a.netomi.com/api/fetchJWT',  {
+          const tokenApiCall = await fetch('https://chatapps-qa-a.netomi.com&isDynamicEnv=true/api/fetchJWT',  {
             method: 'post',
             headers: {
               'href':'https://revanshasti.github.io/Hosting-sites/Authentication.html',
