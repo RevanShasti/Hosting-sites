@@ -55,7 +55,7 @@
        *
        * This is served by the local webpack-dev-server.
        */
-      ns.src = '/script.js';
+      ns.src = 'https://chatapps-qa-a.netomi.com/app/script.js';
 
       ns.type = 'text/javascript';
       ns.async = true;
@@ -78,10 +78,10 @@
        *
        * Required for the localhost branch inside LoadIframe.
        */
-      ns.setAttribute(
-        'debug',
-        'true'
-      );
+     // ns.setAttribute(
+      //  'debug',
+      //  'true'
+      //);
 
       var s = document.getElementsByTagName('script')[0];
 
