@@ -1,5 +1,7 @@
+```html
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -13,194 +15,417 @@
   <button onclick="endAuth()">Clear Authentication</button>
 
   <script>
+
     /*
-     * Load Netomi Chat Widget
+     * ============================================================
+     * NET-65437 REPRO PAGE
+     * ============================================================
+     *
+     * Widget script:
+     *   Loaded locally from /script.js
+     *
+     * JWT API:
+     *   Uses the QA environment directly
+     *
+     * Reproduction:
+     *
+     * 1. Launch this page using the local webpack server.
+     * 2. Click "Start Authentication".
+     * 3. Open the chat widget.
+     * 4. Escalate the conversation to an agent.
+     * 5. Wait for net_controlType in localStorage to become AGENT.
+     * 6. Reload the page.
+     *
+     * ============================================================
      */
+
+
+    /*
+     * ============================================================
+     * LOAD NETOMI CHAT WIDGET
+     * ============================================================
+     */
+
     (function () {
+
       var ns = document.createElement('script');
 
-      // LOCAL ONLY
+      /*
+       * LOCAL ONLY
+       *
+       * This is served by the local webpack-dev-server.
+       */
       ns.src = 'https://chatapps-qa-a.netomi.com/app/script.js';
 
       ns.type = 'text/javascript';
       ns.async = true;
 
-      // NET-65437 bot
+      /*
+       * NET-65437 bot
+       */
       ns.setAttribute(
         'botRefId',
         '3d51f888-5c9a-4e35-bd86-b4cb8cd00f12'
       );
 
-      ns.setAttribute('enableEventQueue', 'true');
+      ns.setAttribute(
+        'enableEventQueue',
+        'true'
+      );
 
-      // LOCAL ONLY
-      ns.setAttribute('debug', 'true');
+      /*
+       * LOCAL ONLY
+       *
+       * Required for the localhost branch inside LoadIframe.
+       */
+      ns.setAttribute(
+        'debug',
+        'true'
+      );
 
       var s = document.getElementsByTagName('script')[0];
+
       s.parentNode.insertBefore(ns, s);
 
+
+      /*
+       * Wait until Netomi script has loaded.
+       */
       ns.onload = function () {
 
-        console.log('Netomi script loaded');
+        console.log('Netomi script loaded successfully');
 
         /*
-         * Initialize the widget before using authModule.
+         * Initialize the Netomi widget.
          */
-        window.NETOMI_WEB_WIDGET.init(function () {
-          console.log('Netomi widget initialized');
-        });
+        if (
+          window.NETOMI_WEB_WIDGET &&
+          window.NETOMI_WEB_WIDGET.init
+        ) {
+
+          window.NETOMI_WEB_WIDGET.init(function () {
+
+            console.log(
+              'Netomi widget initialized successfully'
+            );
+
+          });
+
+        } else {
+
+          console.error(
+            'NETOMI_WEB_WIDGET is not available'
+          );
+
+        }
+
       };
+
     })();
 
 
     /*
-     * Authentication interval
+     * ============================================================
+     * AUTHENTICATION VARIABLES
+     * ============================================================
      */
+
     let id = null;
 
 
     /*
-     * Fetch JWT token
+     * ============================================================
+     * FETCH JWT TOKEN
+     * ============================================================
+     *
+     * IMPORTANT:
+     *
+     * We intentionally use the QA API directly here.
+     *
+     * Do NOT change this to:
+     *
+     *     /api/fetchJWT
+     *
+     * unless the local webpack server has the required proxy.
      */
+
     async function fetchToken() {
 
       try {
 
-        const tokenApiCall = await fetch('/api/fetchJWT', {
-          method: 'POST',
+        console.log(
+          'Requesting new JWT token...'
+        );
 
-          headers: {
-            'Content-Type': 'application/json',
 
-            // LOCAL / NET-65437 bot
-            'x-bot-ref-id':
-              '02b8581e-4b00-4aff-95b8-6bde44c1b688',
+        const tokenApiCall = await fetch(
+          'https://chatapps-qa-a.netomi.com/api/fetchJWT',
+          {
+            method: 'POST',
 
-            // Token expiry
-            'x-token-expiry': '1m',
+            headers: {
 
-            'x-user-details': JSON.stringify({
-              uname: 'John',
-              externalId: 'random@random1',
-              metadata: {
-                Name: 'John Doe',
-                ID: 'NET9879',
-                Organization: 'ABCSamples',
-                curTime: new Date().toLocaleTimeString(),
-                Location: {
-                  City: 'Chicago',
-                  State: 'Illinois'
+              /*
+               * Required by the existing authentication setup.
+               */
+              'href':
+                'https://revanshasti.github.io/Hosting-sites/Authentication.html',
+
+              'Content-Type':
+                'application/json',
+
+              /*
+               * NET-65437 uses a short-lived token
+               * so that token expiry can be reproduced.
+               */
+              'x-token-expiry':
+                '1m',
+
+              /*
+               * NET-65437 bot
+               */
+              'x-bot-ref-id
+                ':
+                '3d51f888-5c9a-4e35-bd86-b4cb8cd00f12',
+
+              /*
+               * User information used while generating JWT.
+               */
+              'x-user-details': JSON.stringify({
+
+                uname: 'John',
+
+                externalId: 'random@random1',
+
+                metadata: {
+
+                  Name: 'John Doe',
+
+                  ID: 'NET9879',
+
+                  Organization: 'ABCSamples',
+
+                  curTime:
+                    new Date().toLocaleTimeString(),
+
+                  Location: {
+
+                    City: 'Chicago',
+
+                    State: 'Illinois'
+
+                  }
+
                 }
-              }
-            })
-          }
-        });
 
+              })
+
+            }
+
+          }
+        );
+
+
+        /*
+         * Check HTTP response.
+         */
         if (!tokenApiCall.ok) {
+
           throw new Error(
             `JWT API failed with status ${tokenApiCall.status}`
           );
+
         }
 
-        const response = await tokenApiCall.json();
 
-        if (!response || !response.token) {
-          throw new Error('JWT token was not returned by the API');
+        /*
+         * Parse response.
+         */
+        const response =
+          await tokenApiCall.json();
+
+
+        /*
+         * Validate token.
+         */
+        if (
+          !response ||
+          !response.token
+        ) {
+
+          throw new Error(
+            'JWT token was not returned by the API'
+          );
+
         }
 
-        console.log('JWT token received');
+
+        console.log(
+          'JWT token received successfully'
+        );
+
 
         return response.token;
 
+
       } catch (error) {
 
-        console.error('Failed to fetch JWT:', error);
+        console.error(
+          'Failed to fetch JWT:',
+          error
+        );
 
         return '';
+
       }
+
     }
 
 
     /*
-     * Start Authentication
-     *
-     * This authentication flow is taken from the working
-     * Authentication.html implementation.
+     * ============================================================
+     * START AUTHENTICATION
+     * ============================================================
      */
+
     async function handleAuth() {
 
       try {
 
-        console.log('Starting authentication...');
+        console.log(
+          'Starting authentication...'
+        );
 
 
         /*
-         * Get initial JWT
+         * Make sure Netomi authentication module
+         * is available before trying to authenticate.
          */
-        const token = await fetchToken();
+
+        if (
+          !window.NETOMI_WEB_WIDGET ||
+          !window.NETOMI_WEB_WIDGET.authModule
+        ) {
+
+          console.error(
+            'Netomi authModule is not available yet.'
+          );
+
+          return;
+
+        }
+
+
+        /*
+         * Fetch initial JWT.
+         */
+
+        const token =
+          await fetchToken();
+
 
         if (!token) {
-          console.error('Authentication stopped: token is empty');
+
+          console.error(
+            'Authentication stopped: JWT token is empty'
+          );
+
           return;
+
         }
 
 
         /*
-         * Login using Netomi authentication module
+         * Login using the same authentication
+         * mechanism as the working Authentication.html.
          */
-        window.NETOMI_WEB_WIDGET.authModule.login(token);
 
-        console.log('Successfully authenticated');
+        window.NETOMI_WEB_WIDGET
+          .authModule
+          .login(token);
+
+
+        console.log(
+          'Successfully authenticated with Netomi'
+        );
 
 
         /*
-         * Prevent multiple authentication intervals
+         * Prevent duplicate refresh intervals.
          */
+
         if (id !== null) {
+
           clearInterval(id);
+
+          id = null;
+
         }
 
 
         /*
-         * Refresh authentication periodically.
+         * ========================================================
+         * TOKEN REFRESH
+         * ========================================================
          *
-         * Token expiry is 1 minute.
-         * Refresh every 55 seconds so that a new token is
-         * available before the current token expires.
+         * Token expiry = 1 minute
+         *
+         * Refresh = every 55 seconds
+         *
+         * This ensures a fresh token is generated before
+         * the existing token expires.
          */
-        id = setInterval(async () => {
+
+        id = setInterval(async function () {
 
           try {
 
-            console.log('Refreshing authentication token...');
+            console.log(
+              'Refreshing authentication token...'
+            );
 
 
-            window.NETOMI_WEB_WIDGET.authModule.jwtAuth(
-              async function (sendTokenToNetomi) {
+            window.NETOMI_WEB_WIDGET
+              .authModule
+              .jwtAuth(
+                async function (sendTokenToNetomi) {
 
-                const token = await fetchToken();
-
-                if (token) {
 
                   /*
-                   * Send the newly generated token to Netomi.
+                   * Generate a fresh JWT.
                    */
+
+                  const newToken =
+                    await fetchToken();
+
+
+                  if (!newToken) {
+
+                    console.error(
+                      'Authentication refresh failed: empty token'
+                    );
+
+                    return;
+
+                  }
+
+
+                  /*
+                   * Send the fresh JWT to Netomi.
+                   */
+
                   sendTokenToNetomi(
-                    token,
+                    newToken,
                     handleAuthError
                   );
 
-                  console.log('Authentication token refreshed');
 
-                } else {
-
-                  console.error(
-                    'Authentication refresh failed: empty token'
+                  console.log(
+                    'Authentication token refreshed successfully'
                   );
 
                 }
-              }
-            );
+              );
 
           } catch (error) {
 
@@ -208,9 +433,11 @@
               'Authentication refresh error:',
               error
             );
+
           }
 
         }, 55000);
+
 
       } catch (error) {
 
@@ -218,114 +445,201 @@
           'Authentication failed:',
           error
         );
+
       }
+
     }
 
 
     /*
-     * Called when Netomi reports an authentication error
-     * such as token expiration or failed refresh.
+     * ============================================================
+     * AUTHENTICATION ERROR CALLBACK
+     * ============================================================
      */
+
     function handleAuthError() {
 
-      console.log('handleAuthError');
+      console.log(
+        'handleAuthError'
+      );
 
       /*
-       * Client-side action can be performed here if required.
+       * Client-specific actions can be performed here
+       * when Netomi reports an authentication failure.
        */
+
     }
 
 
     /*
-     * Clear authentication
+     * ============================================================
+     * END AUTHENTICATION
+     * ============================================================
      */
+
     function endAuth() {
 
-      console.log('Clearing authentication...');
+      console.log(
+        'Clearing authentication...'
+      );
 
 
       /*
-       * Stop token refresh
+       * Stop the token refresh interval.
        */
+
       if (id !== null) {
+
         clearInterval(id);
+
         id = null;
+
       }
 
 
       /*
-       * Logout from Netomi
+       * Logout from Netomi.
        */
+
       if (
         window.NETOMI_WEB_WIDGET &&
         window.NETOMI_WEB_WIDGET.authModule
       ) {
 
-        window.NETOMI_WEB_WIDGET.authModule.logout();
+        window.NETOMI_WEB_WIDGET
+          .authModule
+          .logout();
 
-        console.log('Authentication cleared');
+        console.log(
+          'Authentication cleared successfully'
+        );
 
       } else {
 
         console.warn(
-          'Netomi authentication module is not available'
+          'Netomi authModule is not available'
         );
+
       }
+
     }
 
 
     /*
-     * Optional manual login helper.
+     * ============================================================
+     * MANUAL LOGIN
+     * ============================================================
+     *
+     * Optional helper for testing.
      */
+
     async function manualLogin() {
 
-      const token = await fetchToken();
+      try {
 
-      if (token) {
+        const token =
+          await fetchToken();
 
-        window.NETOMI_WEB_WIDGET.authModule.login(token);
 
-        console.log('Manual login successful');
+        if (!token) {
 
-      } else {
+          console.error(
+            'Manual login failed: JWT token is empty'
+          );
+
+          return;
+
+        }
+
+
+        window.NETOMI_WEB_WIDGET
+          .authModule
+          .login(token);
+
+
+        console.log(
+          'Manual login successful'
+        );
+
+
+      } catch (error) {
 
         console.error(
-          'Manual login failed: token is empty'
+          'Manual login failed:',
+          error
         );
+
       }
+
     }
 
 
     /*
-     * Clear Netomi local authentication state.
+     * ============================================================
+     * CLEAR NETOMI AUTHENTICATION STATE
+     * ============================================================
+     *
+     * Removes Netomi-related localStorage and cookies,
+     * then reloads the page.
      */
+
     function clearAuth() {
+
+      console.log(
+        'Clearing Netomi local authentication state...'
+      );
+
+
+      /*
+       * Clear net_* localStorage entries.
+       */
 
       Object.keys(localStorage)
         .filter(function (key) {
+
           return key.startsWith('net_');
+
         })
         .forEach(function (key) {
+
           localStorage.removeItem(key);
+
         });
 
 
-      document.cookie.split(';').forEach(function (cookie) {
+      /*
+       * Clear net_* cookies.
+       */
 
-        const name = cookie.split('=')[0].trim();
+      document.cookie
+        .split(';')
+        .forEach(function (cookie) {
 
-        if (name.startsWith('net_')) {
+          const name =
+            cookie.split('=')[0].trim();
 
-          document.cookie =
-            `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
-        }
-      });
 
+          if (name.startsWith('net_')) {
+
+            document.cookie =
+              `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
+
+          }
+
+        });
+
+
+      /*
+       * Reload the page.
+       */
 
       location.reload();
+
     }
 
   </script>
 
 </body>
+
 </html>
+```
