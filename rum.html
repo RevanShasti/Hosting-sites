@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <meta name="RATING" content="RTA-5042-1996-1400-1577-RTA" />
+
+    <!-- Datadog RUM -->
+    <script>
+      (function(h,o,u,n,d) {
+        h=h[d]=h[d]||{q:[],onReady:function(c){h.q.push(c)}}
+        d=o.createElement(u);d.async=1;d.src=n;d.crossOrigin=''
+        n=o.getElementsByTagName(u)[0];n.parentNode.insertBefore(d,n)
+      })(window,document,'script','https://www.datadoghq-browser-agent.com/us5/v7/datadog-rum.js','DD_RUM')
+      window.DD_RUM.onReady(function() {
+        window.DD_RUM.init({
+            applicationId: '7fb3351a-cba9-4117-a2d4-1e386fe64622',
+            clientToken: 'pubb0de9ec622bdb527c3ce69d0e26e28fa',
+            site: 'us5.datadoghq.com',
+            service: 'qa-testing-app',
+            env: 'staging',
+            version: '1.0.0',
+            sessionSampleRate: 100, // capture 100% of sessions
+            sessionReplaySampleRate: 20, // capture 20% of sessions with replay
+            trackResources: true, // Enable Resource tracking
+            trackUserInteractions: true, // Enable Action tracking
+            trackLongTasks: true, // Enable Long Tasks tracking
+        });
+      })
+    </script>
+    <!-- End Datadog RUM -->
+
+</head>
+<body>
+    <button onclick="Netomi.chat.openWidget()">Support</button>
+    <script>
+      (function() {
+        var ns = document.createElement('script');
+        ns.src = 'https://chatapps-qa-a.netomi.com/app/script.js';
+        ns.type = 'text/javascript';
+        ns.async = true;
+        ns.setAttribute('botRefId', 'a5addd98-2627-437b-899c-2f97ff2e2b18');
+        ns.setAttribute("enableEventQueue", "true");
+        var s = document.getElementsByTagName('script')[0];
+        s.parentNode.insertBefore(ns, s);
+        ns.onload = function () {
+          window.NETOMI_WEB_WIDGET.init(() => {
+            /* add publish events here */
+          });
+        };
+      })();
+    </script>
+</body>
+</html>
