@@ -1741,23 +1741,217 @@
     <script src="/uxasset/externals/amb-client-js/index.jsdbx?sysparm_use_cache_buster=true&amp;uxpcb=1787082810620" type="module"></script>
     <script src="/uxasset/externals/@servicenow/now-icon/icons/magnifyingGlass.jsdbx?sysparm_use_cache_buster=true&amp;uxpcb=1787082810620" type="module"></script>
     <script src="/uxasset/externals/ais-ux-bundle/index.jsdbx?sysparm_use_cache_buster=true&amp;uxpcb=1787082810620" type="module"></script>
+
+    <!-- Netomi JWT-authenticated widget -->
     <script>
-        (function() {
+        (function () {
+            'use strict';
+
+            var NETOMI_BOT_REF_ID = 'f8997270-9f62-4315-9de9-d743e587d5bb';
+            var NETOMI_USER_ID = '61e3ae58-fb4c-4c6f-a22d-e163d2d42060';
+            var NETOMI_USER_NAME = 'Amanda S';
+            var NETOMI_USER_EMAIL = 'a.shadrack@mimic-dk.com';
+
+            var refreshTimer = null;
+
+            /*
+             * Load Netomi exactly through the widget script.
+             * Authentication is NOT passed as a script userId attribute.
+             * The authenticated identity is established by the JWT below.
+             */
             var ns = document.createElement('script');
             ns.src = 'https://chatapps-qa-a.netomi.com/app/script.js';
             ns.type = 'text/javascript';
             ns.async = true;
-            ns.setAttribute('botRefId', 'f8997270-9f62-4315-9de9-d743e587d5bb');
+            ns.setAttribute('botRefId', NETOMI_BOT_REF_ID);
+            ns.setAttribute('enableEventQueue', 'true');
 
-            var s = document.getElementsByTagName('script')[0];
-            s.parentNode.insertBefore(ns, s);
+            var firstScript = document.getElementsByTagName('script')[0];
+            firstScript.parentNode.insertBefore(ns, firstScript);
 
-            ns.onload = function() {
-                window.Netomi.chat.init(function() {
-                    /* add publish events here */
-                });
+            /*
+             * Fetch a fresh JWT from the same QA authentication endpoint
+             * used by the working Authentication.html flow.
+             */
+            async function fetchToken() {
+                try {
+                    console.log('[Netomi Auth] Requesting new JWT...');
+
+                    var tokenApiCall = await fetch(
+                        'https://chatapps-qa-a.netomi.com/api/fetchJWT',
+                        {
+                            method: 'POST',
+                            headers: {
+                                'href': 'https://revanshasti.github.io/Hosting-sites/DK_netomi_bot.html',
+                                'Content-Type': 'application/json',
+
+                                /*
+                                 * Keep the same short-lived JWT behavior as
+                                 * the working authentication reproduction.
+                                 */
+                                'x-token-expiry': '1m',
+
+                                'x-bot-ref-id': NETOMI_BOT_REF_ID,
+
+                                /*
+                                 * The user ID is carried as externalId in the
+                                 * JWT-generation request. This is the important
+                                 * part that establishes the logged-in identity.
+                                 */
+                                'x-user-details': JSON.stringify({
+                                    uname: NETOMI_USER_NAME,
+                                    externalId: NETOMI_USER_ID,
+                                    metadata: {
+                                        Name: NETOMI_USER_NAME,
+                                        ID: NETOMI_USER_ID,
+                                        Email: NETOMI_USER_EMAIL,
+                                        Organization: 'DraftKings',
+                                        curTime: new Date().toLocaleTimeString()
+                                    }
+                                })
+                            }
+                        }
+                    );
+
+                    if (!tokenApiCall.ok) {
+                        throw new Error(
+                            'JWT API failed with status ' + tokenApiCall.status
+                        );
+                    }
+
+                    var response = await tokenApiCall.json();
+
+                    if (!response || !response.token) {
+                        throw new Error('JWT token was not returned by the API');
+                    }
+
+                    console.log('[Netomi Auth] JWT received successfully');
+                    return response.token;
+
+                } catch (error) {
+                    console.error('[Netomi Auth] Failed to fetch JWT:', error);
+                    return '';
+                }
+            }
+
+            function handleAuthError() {
+                console.error('[Netomi Auth] Netomi reported an authentication failure');
+            }
+
+            /*
+             * Authenticate the widget with the JWT.
+             */
+            async function handleAuth() {
+                try {
+                    if (
+                        !window.NETOMI_WEB_WIDGET ||
+                        !window.NETOMI_WEB_WIDGET.authModule
+                    ) {
+                        console.error('[Netomi Auth] authModule is not available');
+                        return;
+                    }
+
+                    var token = await fetchToken();
+
+                    if (!token) {
+                        console.error('[Netomi Auth] Authentication stopped: empty JWT');
+                        return;
+                    }
+
+                    window.NETOMI_WEB_WIDGET.authModule.login(token);
+
+                    console.log(
+                        '[Netomi Auth] Successfully authenticated user:',
+                        NETOMI_USER_ID
+                    );
+
+                    /*
+                     * Refresh before the 1-minute JWT expires.
+                     * This mirrors the working authentication flow.
+                     */
+                    if (refreshTimer !== null) {
+                        clearInterval(refreshTimer);
+                    }
+
+                    refreshTimer = setInterval(async function () {
+                        try {
+                            console.log('[Netomi Auth] Refreshing JWT...');
+
+                            window.NETOMI_WEB_WIDGET.authModule.jwtAuth(
+                                async function (sendTokenToNetomi) {
+                                    var newToken = await fetchToken();
+
+                                    if (!newToken) {
+                                        console.error(
+                                            '[Netomi Auth] Refresh failed: empty JWT'
+                                        );
+                                        return;
+                                    }
+
+                                    sendTokenToNetomi(
+                                        newToken,
+                                        handleAuthError
+                                    );
+
+                                    console.log(
+                                        '[Netomi Auth] JWT refreshed successfully'
+                                    );
+                                }
+                            );
+
+                        } catch (error) {
+                            console.error(
+                                '[Netomi Auth] Authentication refresh error:',
+                                error
+                            );
+                        }
+                    }, 55000);
+
+                } catch (error) {
+                    console.error('[Netomi Auth] Authentication failed:', error);
+                }
+            }
+
+            /*
+             * Initialize first, then authenticate.
+             * This is critical: login() must happen only after the Netomi
+             * authModule has been created.
+             */
+            ns.onload = function () {
+                console.log('[Netomi] Script loaded successfully');
+
+                if (
+                    window.NETOMI_WEB_WIDGET &&
+                    window.NETOMI_WEB_WIDGET.init
+                ) {
+                    window.NETOMI_WEB_WIDGET.init(function () {
+                        console.log('[Netomi] Widget initialized');
+
+                        handleAuth();
+                    });
+                } else {
+                    console.error(
+                        '[Netomi] NETOMI_WEB_WIDGET is not available'
+                    );
+                }
             };
+
+            ns.onerror = function () {
+                console.error('[Netomi] Failed to load script.js');
+            };
+
+            /*
+             * Optional cleanup if the page is unloaded.
+             */
+            window.addEventListener('beforeunload', function () {
+                if (refreshTimer !== null) {
+                    clearInterval(refreshTimer);
+                    refreshTimer = null;
+                }
+            });
+
         })();
     </script>
+
 </body>
 </html>
