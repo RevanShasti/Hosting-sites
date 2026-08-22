@@ -58,9 +58,9 @@
 
     /*
      * Keep the DK renewal behavior:
-     * first renewal occurs 60 seconds after login.
+     * renewal occurs every 5 minutes, matching the known-working basic HTML.
      */
-    const REAUTHENTICATION_INTERVAL = 60000;
+    const REAUTHENTICATION_INTERVAL = 300000;
 
 
     /* =========================================================
@@ -270,9 +270,7 @@
     async function renewToken() {
         const token = await fetchToken();
 
-        return {
-            token: token
-        };
+        return token;
     }
 
 
@@ -357,7 +355,7 @@
         }
 
         console.log(
-            "[NETOMI-DK] Starting 60-second re-authentication timer"
+            "[NETOMI-DK] Starting 5-minute re-authentication timer"
         );
 
         reAuthenticateIntervalId =
@@ -365,7 +363,7 @@
                 async function () {
 
                     console.log(
-                        "[NETOMI-DK] 60 seconds elapsed - starting JWT renewal"
+                        "[NETOMI-DK] 5 minutes elapsed - starting JWT renewal"
                     );
 
                     try {
@@ -681,12 +679,18 @@
 
 
         /*
-         * Keep this for MQTT/event behavior.
+         * IMPORTANT:
+         *
+         * Do NOT set enableEventQueue here.
+         *
+         * The known-working basic HTML does not set this
+         * attribute. The widget's native conversation/send
+         * lifecycle works correctly without it.
+         *
+         * We are keeping the widget configuration aligned
+         * with the known-working basic page and letting the
+         * Netomi widget establish its own MQTT connection.
          */
-        ns.setAttribute(
-            "enableEventQueue",
-            "true"
-        );
 
 
         ns.setAttribute(
