@@ -731,6 +731,24 @@
                  *
                  * We do NOT use onNewConversation().
                  */
+                /*
+                 * IMPORTANT:
+                 *
+                 * The working basic HTML starts authentication only
+                 * after NETOMI_WEB_WIDGET.init() has completed.
+                 *
+                 * Previously we called init() but did not wait for its
+                 * callback, so authentication/login could complete BEFORE
+                 * widget initialization. The console confirmed that:
+                 *
+                 *   authModule.login() completed
+                 *   ...
+                 *   NETOMI_WEB_WIDGET initialized
+                 *
+                 * That ordering is different from the working page.
+                 *
+                 * Wait for init() to finish before authenticating.
+                 */
                 if (
                     window.NETOMI_WEB_WIDGET &&
                     typeof window.NETOMI_WEB_WIDGET.init ===
@@ -741,14 +759,20 @@
                         "[NETOMI-DK] Initializing NETOMI_WEB_WIDGET..."
                     );
 
-                    window.NETOMI_WEB_WIDGET.init(
-                        function () {
+                    await new Promise(function (resolve) {
 
-                            console.log(
-                                "[NETOMI-DK] NETOMI_WEB_WIDGET initialized"
-                            );
-                        }
-                    );
+                        window.NETOMI_WEB_WIDGET.init(
+                            function () {
+
+                                console.log(
+                                    "[NETOMI-DK] NETOMI_WEB_WIDGET initialized"
+                                );
+
+                                resolve();
+                            }
+                        );
+
+                    });
 
                 } else {
 
@@ -807,10 +831,14 @@
                     "[NETOMI-DK] Netomi.chat is ready"
                 );
 
+                console.log(
+                    "[NETOMI-DK] Widget initialization completed. Starting authentication..."
+                );
+
 
                 /*
-                 * Authenticate BEFORE the user interacts
-                 * with the widget.
+                 * Authenticate only AFTER NETOMI_WEB_WIDGET.init()
+                 * has completed.
                  */
                 await authenticate();
 
