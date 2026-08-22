@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="X-UA-Compatible" content="IE=Standards" />
+  <title>Web Chat - Authentication</title>
+</head>
+
+<body>
+
+  <button onclick="handleAuth()">Start Authentication</button>
+  <button onclick="endAuth()">Clear Authentication</button>
+
+  <script>
+    let id = null;
+    let isAuthenticated = false;
+
+    /*
+     * Load Netomi Widget
+     */
+    (function () {
+      var ns = document.createElement('script');
+
+      ns.src = 'https://chatapps-qa-a.netomi.com/app/script.js';
+      ns.type = 'text/javascript';
+      ns.async = true;
+
+      ns.setAttribute(
+        'botRefId',
+        'a5addd98-2627-437b-899c-2f97ff2e2b18'
+      );
+
+      ns.setAttribute('isDynamicEnv', 'false');
+
+      var s = document.getElementsByTagName('script')[0];
+      s.parentNode.insertBefore(ns, s);
+
+      ns.onload = function () {
+
+        console.log('✅ Netomi script loaded');
+
+        window.NETOMI_WEB_WIDGET.init(() => {
+
+          console.log('✅ Netomi widget initialized');
+
+          /*
+           * Start authentication when the widget is opened
+           */
+          setupWidgetAuthentication();
+
+        });
+      };
+    })();
+
+
+    /*
+     * Setup authentication trigger
+     */
+    function setupWidgetAuthentication() {
+
+      console.log('🔐 Setting up widget authentication trigger');
+
+      /*
+       * Wrap the Netomi openWidget function.
+       *
+       * When the user clicks the widget icon and the SDK calls
+       * openWidget(), authentication will start first.
+       */
+      if (
+        window.Netomi &&
+        window.Netomi.chat &&
+        typeof window.Netomi.chat.openWidget === 'function'
+      ) {
+
+        const originalOpenWidget =
+          window.Netomi.chat.openWidget;
+
+        window.Netomi.chat.openWidget = function () {
+
+          console.log('💬 Widget opened');
+
+          /*
+           * Start authentication when widget opens
+           */
+          if (!isAuthenticated) {
+            console.log('🔐 Starting authentication...');
+            handleAuth();
+          }
+
+          /*
+           * Continue normal widget opening
+           */
+          return originalOpenWidget.apply(this, arguments);
+        };
+
+        console.log('✅ Widget open authentication hook installed');
+
+      } else {
+
+        console.warn(
+          '⚠️ Netomi.chat.openWidget not available'
+        );
+      }
+    }
+
+
+    /*
+     * Authentication
+     */
+    async function handleAuth() {
+
+      /*
+       * Prevent multiple authentication intervals
+       */
+      if (isAuthenticated) {
+        console.log('ℹ️ Authentication already active');
+        return;
+      }
+
+      console.log('🔐 Authentication started');
+
+      /*
+       * Function to generate a fresh JWT
+       */
+      async function renewToken() {
+
+        console.log('🔄 Generating new JWT');
+
+        const tokenApiCall = await fetch(
+          'https://chatapps-qa-a.netomi.com/api/fetchJWT',
+          {
+            method: 'POST',
+
+            headers: {
+              'href':
+                'https://revanshasti.github.io/Hosting-sites/Authentication.html',
+
+              'Content-Type': 'application/json',
+
+              'x-token-expiry': '10m',
+
+              'x-bot-ref-id':
+                'a5addd98-2627-437b-899c-2f97ff2e2b18',
+
+              'x-user-details': JSON.stringify({
+                name: 'Revan Shasti',
+                externalId: 'revan@gmail.com'
+              })
+            }
+          }
+        );
+
+        const { token } = await tokenApiCall.json();
+
+        return token;
+      }
+
+
+      /*
+       * Get initial JWT
+       */
+      const tokenApiCall = await fetch(
+        'https://chatapps-qa-a.netomi.com/api/fetchJWT',
+        {
+          method: 'POST',
+
+          headers: {
+            'href':
+              'https://revanshasti.github.io/Hosting-sites/Authentication.html',
+
+            'Content-Type': 'application/json',
+
+            'x-token-expiry': '10m',
+
+            'x-bot-ref-id':
+              'a5addd98-2627-437b-899c-2f97ff2e2b18',
+
+            'x-user-details': JSON.stringify({
+              name: 'Revan Shasti',
+              externalId: 'revan@gmail.com'
+            })
+          }
+        }
+      );
+
+
+      const { token } = await tokenApiCall.json();
+
+      console.log('✅ JWT received');
+
+
+      /*
+       * Login into Netomi authentication module
+       */
+      window.NETOMI_WEB_WIDGET.authModule.login(token);
+
+      isAuthenticated = true;
+
+      console.log('✅ Netomi authentication successful');
+
+
+      /*
+       * Renew JWT every 5 minutes
+       */
+      id = setInterval(() => {
+
+        console.log('🔄 Running JWT renewal');
+
+        window.NETOMI_WEB_WIDGET.authModule.jwtAuth(
+          async sendTokenToNetomi => {
+
+            const tokenApiCall = await fetch(
+              'https://chatapps-qa-a.netomi.com/api/fetchJWT',
+              {
+                method: 'POST',
+
+                headers: {
+                  'href':
+                    'https://revanshasti.github.io/Hosting-sites/Authentication.html',
+
+                  'Content-Type': 'application/json',
+
+                  'x-token-expiry': '10m',
+
+                  'x-bot-ref-id':
+                    'a5addd98-2627-437b-899c-2f97ff2e2b18',
+
+                  'x-user-details': JSON.stringify({
+                    name: 'Revan Shasti',
+                    externalId: 'revan@gmail.com'
+                  })
+                }
+              }
+            );
+
+            const tokenResp = await tokenApiCall.json();
+
+            console.log('✅ Sending refreshed JWT to Netomi');
+
+            sendTokenToNetomi(tokenResp, renewToken);
+          }
+        );
+
+      }, 300000); // 5 minutes
+    }
+
+
+    /*
+     * End authentication
+     */
+    function endAuth() {
+
+      console.log('🔓 Clearing authentication');
+
+      clearInterval(id);
+
+      id = null;
+
+      isAuthenticated = false;
+
+      if (
+        window.NETOMI_WEB_WIDGET &&
+        window.NETOMI_WEB_WIDGET.authModule
+      ) {
+
+        window.NETOMI_WEB_WIDGET.authModule.logout();
+
+        console.log('✅ Authentication cleared');
+      }
+    }
+
+  </script>
+
+</body>
+</html>
