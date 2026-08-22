@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta http-equiv="X-UA-Compatible" content="IE=Standards" />
-  <title>Web Chat - Authentication</title>
+  <title>Netomi Widget Authentication</title>
 </head>
 
 <body>
@@ -13,261 +13,510 @@
   <button onclick="endAuth()">Clear Authentication</button>
 
   <script>
-    let id = null;
-    let isAuthenticated = false;
+    const BOT_REF_ID = 'a5addd98-2627-437b-899c-2f97ff2e2b18';
 
-    /*
-     * Load Netomi Widget
-     */
+    const JWT_URL =
+      'https://chatapps-qa-a.netomi.com/api/fetchJWT';
+
+    const PAGE_URL =
+      'https://revanshasti.github.io/Hosting-sites/Authentication.html';
+
+    let authInterval = null;
+    let isAuthenticated = false;
+    let widgetWasClosed = true;
+
+
+    // ============================================================
+    // LOAD NETOMI WIDGET
+    // ============================================================
+
     (function () {
-      var ns = document.createElement('script');
+
+      const ns = document.createElement('script');
 
       ns.src = 'https://chatapps-qa-a.netomi.com/app/script.js';
       ns.type = 'text/javascript';
       ns.async = true;
 
-      ns.setAttribute(
-        'botRefId',
-        'a5addd98-2627-437b-899c-2f97ff2e2b18'
-      );
-
+      ns.setAttribute('botRefId', BOT_REF_ID);
       ns.setAttribute('isDynamicEnv', 'false');
 
-      var s = document.getElementsByTagName('script')[0];
-      s.parentNode.insertBefore(ns, s);
+      document.head.appendChild(ns);
 
       ns.onload = function () {
 
         console.log('✅ Netomi script loaded');
 
-        window.NETOMI_WEB_WIDGET.init(() => {
+        if (
+          window.NETOMI_WEB_WIDGET &&
+          typeof window.NETOMI_WEB_WIDGET.init === 'function'
+        ) {
 
-          console.log('✅ Netomi widget initialized');
+          window.NETOMI_WEB_WIDGET.init(function () {
 
-          /*
-           * Start authentication when the widget is opened
-           */
-          setupWidgetAuthentication();
+            console.log('✅ Netomi widget initialized');
 
-        });
+            startWidgetOpenWatcher();
+
+          });
+
+        } else {
+
+          console.error(
+            '❌ NETOMI_WEB_WIDGET is not available'
+          );
+        }
       };
+
     })();
 
 
-    /*
-     * Setup authentication trigger
-     */
-    function setupWidgetAuthentication() {
+    // ============================================================
+    // WATCH FOR WIDGET OPEN
+    // ============================================================
 
-      console.log('🔐 Setting up widget authentication trigger');
+    function startWidgetOpenWatcher() {
+
+      console.log('👀 Starting widget open watcher');
 
       /*
-       * Wrap the Netomi openWidget function.
+       * The Netomi widget creates/updates its iframe when it opens.
        *
-       * When the user clicks the widget icon and the SDK calls
-       * openWidget(), authentication will start first.
+       * We DON'T override openWidget().
+       * We simply observe the DOM and detect when the widget iframe
+       * becomes visible.
        */
-      if (
-        window.Netomi &&
-        window.Netomi.chat &&
-        typeof window.Netomi.chat.openWidget === 'function'
-      ) {
 
-        const originalOpenWidget =
-          window.Netomi.chat.openWidget;
+      const observer = new MutationObserver(function () {
 
-        window.Netomi.chat.openWidget = function () {
+        detectWidgetOpen();
 
-          console.log('💬 Widget opened');
+      });
 
-          /*
-           * Start authentication when widget opens
-           */
-          if (!isAuthenticated) {
-            console.log('🔐 Starting authentication...');
-            handleAuth();
-          }
+      observer.observe(document.body, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: [
+          'style',
+          'class',
+          'hidden'
+        ]
+      });
 
-          /*
-           * Continue normal widget opening
-           */
-          return originalOpenWidget.apply(this, arguments);
-        };
 
-        console.log('✅ Widget open authentication hook installed');
+      /*
+       * Also check periodically.
+       * This protects us if the widget changes styles without
+       * triggering the mutation we expect.
+       */
 
-      } else {
+      setInterval(function () {
 
-        console.warn(
-          '⚠️ Netomi.chat.openWidget not available'
-        );
+        detectWidgetOpen();
+
+      }, 500);
+
+
+      console.log('✅ Widget open watcher started');
+    }
+
+
+    // ============================================================
+    // DETECT WIDGET OPEN
+    // ============================================================
+
+    function detectWidgetOpen() {
+
+      /*
+       * Netomi widget iframe
+       */
+      const iframe =
+        document.getElementById('netomiChatWindow');
+
+      if (!iframe) {
+        return;
+      }
+
+
+      const style =
+        window.getComputedStyle(iframe);
+
+      const rect =
+        iframe.getBoundingClientRect();
+
+
+      const isVisible =
+        style.display !== 'none' &&
+        style.visibility !== 'hidden' &&
+        style.opacity !== '0' &&
+        rect.width > 0 &&
+        rect.height > 0;
+
+
+      /*
+       * Widget has just changed from CLOSED → OPEN
+       */
+
+      if (isVisible && widgetWasClosed) {
+
+        widgetWasClosed = false;
+
+        console.log('💬 Widget opened');
+
+        /*
+         * START AUTHENTICATION
+         */
+        if (!isAuthenticated) {
+
+          console.log(
+            '🔐 Widget opened - starting authentication'
+          );
+
+          handleAuth();
+
+        } else {
+
+          console.log(
+            'ℹ️ User already authenticated'
+          );
+        }
+      }
+
+
+      /*
+       * Widget has changed from OPEN → CLOSED
+       */
+
+      if (!isVisible && !widgetWasClosed) {
+
+        widgetWasClosed = true;
+
+        console.log('🔽 Widget closed');
+
       }
     }
 
 
-    /*
-     * Authentication
-     */
+    // ============================================================
+    // AUTHENTICATION
+    // ============================================================
+
     async function handleAuth() {
 
       /*
-       * Prevent multiple authentication intervals
+       * Don't create multiple authentication sessions.
        */
+
       if (isAuthenticated) {
-        console.log('ℹ️ Authentication already active');
+
+        console.log(
+          'ℹ️ Authentication already active'
+        );
+
         return;
       }
 
-      console.log('🔐 Authentication started');
 
-      /*
-       * Function to generate a fresh JWT
-       */
-      async function renewToken() {
+      console.log('🔐 Starting authentication flow');
 
-        console.log('🔄 Generating new JWT');
 
-        const tokenApiCall = await fetch(
-          'https://chatapps-qa-a.netomi.com/api/fetchJWT',
-          {
+      try {
+
+        /*
+         * --------------------------------------------------------
+         * GET INITIAL JWT
+         * --------------------------------------------------------
+         */
+
+        const tokenResponse =
+          await fetch(JWT_URL, {
+
             method: 'POST',
 
             headers: {
-              'href':
-                'https://revanshasti.github.io/Hosting-sites/Authentication.html',
 
-              'Content-Type': 'application/json',
+              'href': PAGE_URL,
 
-              'x-token-expiry': '10m',
+              'Content-Type':
+                'application/json',
+
+              'x-token-expiry':
+                '10m',
 
               'x-bot-ref-id':
-                'a5addd98-2627-437b-899c-2f97ff2e2b18',
+                BOT_REF_ID,
 
-              'x-user-details': JSON.stringify({
-                name: 'Revan Shasti',
-                externalId: 'revan@gmail.com'
-              })
+              'x-user-details':
+                JSON.stringify({
+                  name: 'Revan Shasti',
+                  externalId: 'revan@gmail.com'
+                })
             }
-          }
+          });
+
+
+        if (!tokenResponse.ok) {
+
+          throw new Error(
+            'JWT API failed: ' +
+            tokenResponse.status
+          );
+        }
+
+
+        const tokenData =
+          await tokenResponse.json();
+
+
+        const token =
+          tokenData.token;
+
+
+        if (!token) {
+
+          throw new Error(
+            'JWT was not returned by fetchJWT API'
+          );
+        }
+
+
+        console.log(
+          '✅ JWT received'
         );
 
-        const { token } = await tokenApiCall.json();
 
-        return token;
+        /*
+         * --------------------------------------------------------
+         * LOGIN TO NETOMI
+         * --------------------------------------------------------
+         */
+
+        if (
+          !window.NETOMI_WEB_WIDGET ||
+          !window.NETOMI_WEB_WIDGET.authModule
+        ) {
+
+          throw new Error(
+            'Netomi authModule is not available'
+          );
+        }
+
+
+        window.NETOMI_WEB_WIDGET
+          .authModule
+          .login(token);
+
+
+        isAuthenticated = true;
+
+
+        console.log(
+          '✅ Netomi authentication successful'
+        );
+
+
+        /*
+         * --------------------------------------------------------
+         * JWT RENEWAL
+         * --------------------------------------------------------
+         */
+
+        startTokenRenewal();
+
+      } catch (error) {
+
+        console.error(
+          '❌ Authentication failed:',
+          error
+        );
+
+        isAuthenticated = false;
+      }
+    }
+
+
+    // ============================================================
+    // JWT RENEWAL
+    // ============================================================
+
+    function startTokenRenewal() {
+
+      /*
+       * Prevent duplicate intervals.
+       */
+
+      if (authInterval) {
+
+        clearInterval(authInterval);
+
       }
 
 
       /*
-       * Get initial JWT
+       * Your JWT expires in 10 minutes.
+       *
+       * Refresh every 5 minutes.
        */
-      const tokenApiCall = await fetch(
-        'https://chatapps-qa-a.netomi.com/api/fetchJWT',
-        {
-          method: 'POST',
 
-          headers: {
-            'href':
-              'https://revanshasti.github.io/Hosting-sites/Authentication.html',
+      authInterval = setInterval(async function () {
 
-            'Content-Type': 'application/json',
-
-            'x-token-expiry': '10m',
-
-            'x-bot-ref-id':
-              'a5addd98-2627-437b-899c-2f97ff2e2b18',
-
-            'x-user-details': JSON.stringify({
-              name: 'Revan Shasti',
-              externalId: 'revan@gmail.com'
-            })
-          }
-        }
-      );
+        console.log(
+          '🔄 Starting JWT renewal'
+        );
 
 
-      const { token } = await tokenApiCall.json();
+        try {
 
-      console.log('✅ JWT received');
+          window.NETOMI_WEB_WIDGET
+            .authModule
+            .jwtAuth(
+              async function (sendTokenToNetomi) {
+
+                try {
+
+                  const tokenResponse =
+                    await fetch(JWT_URL, {
+
+                      method: 'POST',
+
+                      headers: {
+
+                        'href': PAGE_URL,
+
+                        'Content-Type':
+                          'application/json',
+
+                        'x-token-expiry':
+                          '10m',
+
+                        'x-bot-ref-id':
+                          BOT_REF_ID,
+
+                        'x-user-details':
+                          JSON.stringify({
+                            name: 'Revan Shasti',
+                            externalId: 'revan@gmail.com'
+                          })
+                      }
+                    });
 
 
-      /*
-       * Login into Netomi authentication module
-       */
-      window.NETOMI_WEB_WIDGET.authModule.login(token);
-
-      isAuthenticated = true;
-
-      console.log('✅ Netomi authentication successful');
+                  const tokenData =
+                    await tokenResponse.json();
 
 
-      /*
-       * Renew JWT every 5 minutes
-       */
-      id = setInterval(() => {
+                  console.log(
+                    '✅ New JWT received'
+                  );
 
-        console.log('🔄 Running JWT renewal');
 
-        window.NETOMI_WEB_WIDGET.authModule.jwtAuth(
-          async sendTokenToNetomi => {
+                  sendTokenToNetomi(
+                    tokenData,
+                    async function renewToken() {
 
-            const tokenApiCall = await fetch(
-              'https://chatapps-qa-a.netomi.com/api/fetchJWT',
-              {
-                method: 'POST',
+                      const response =
+                        await fetch(JWT_URL, {
 
-                headers: {
-                  'href':
-                    'https://revanshasti.github.io/Hosting-sites/Authentication.html',
+                          method: 'POST',
 
-                  'Content-Type': 'application/json',
+                          headers: {
 
-                  'x-token-expiry': '10m',
+                            'href': PAGE_URL,
 
-                  'x-bot-ref-id':
-                    'a5addd98-2627-437b-899c-2f97ff2e2b18',
+                            'Content-Type':
+                              'application/json',
 
-                  'x-user-details': JSON.stringify({
-                    name: 'Revan Shasti',
-                    externalId: 'revan@gmail.com'
-                  })
+                            'x-token-expiry':
+                              '10m',
+
+                            'x-bot-ref-id':
+                              BOT_REF_ID,
+
+                            'x-user-details':
+                              JSON.stringify({
+                                name: 'Revan Shasti',
+                                externalId:
+                                  'revan@gmail.com'
+                              })
+                          }
+                        });
+
+
+                      const data =
+                        await response.json();
+
+
+                      return data.token;
+                    }
+                  );
+
+                } catch (error) {
+
+                  console.error(
+                    '❌ JWT renewal failed:',
+                    error
+                  );
+
                 }
               }
             );
 
-            const tokenResp = await tokenApiCall.json();
+        } catch (error) {
 
-            console.log('✅ Sending refreshed JWT to Netomi');
+          console.error(
+            '❌ jwtAuth failed:',
+            error
+          );
 
-            sendTokenToNetomi(tokenResp, renewToken);
-          }
-        );
+        }
 
       }, 300000); // 5 minutes
+
+
+      console.log(
+        '⏱️ JWT renewal scheduled every 5 minutes'
+      );
     }
 
 
-    /*
-     * End authentication
-     */
+    // ============================================================
+    // LOGOUT
+    // ============================================================
+
     function endAuth() {
 
-      console.log('🔓 Clearing authentication');
+      console.log(
+        '🔓 Clearing authentication'
+      );
 
-      clearInterval(id);
 
-      id = null;
+      if (authInterval) {
 
-      isAuthenticated = false;
+        clearInterval(authInterval);
+
+        authInterval = null;
+      }
+
 
       if (
         window.NETOMI_WEB_WIDGET &&
         window.NETOMI_WEB_WIDGET.authModule
       ) {
 
-        window.NETOMI_WEB_WIDGET.authModule.logout();
+        window.NETOMI_WEB_WIDGET
+          .authModule
+          .logout();
 
-        console.log('✅ Authentication cleared');
       }
+
+
+      isAuthenticated = false;
+
+
+      console.log(
+        '✅ Authentication cleared'
+      );
     }
 
   </script>
