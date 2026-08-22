@@ -1004,6 +1004,27 @@
                     console.log(
                         "[NETOMI-DK] Netomi.chat is ready"
                     );
+                    /*
+ * Initialize the Netomi widget.
+ */
+if (
+    window.NETOMI_WEB_WIDGET &&
+    typeof window.NETOMI_WEB_WIDGET.init === "function"
+) {
+
+    console.log(
+        "[NETOMI-DK] Initializing NETOMI_WEB_WIDGET..."
+    );
+
+    window.NETOMI_WEB_WIDGET.init(function () {
+
+        console.log(
+            "[NETOMI-DK] NETOMI_WEB_WIDGET initialized"
+        );
+
+    });
+}
+
 
 
                     /*
