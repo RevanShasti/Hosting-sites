@@ -1,510 +1,548 @@
-//# sourceURL=dk_footer.js
-api.controller=(async function($window, $scope, $rootScope, $timeout, $uibModal, $location) {
-    var c = this;
-    var noChat = c.data.noChat;
-    function styleChat() {
-        function applyInternalChatStyle(style) {
-            var styleWithPlaceholders = style;
-            function waitForElement(selectFunc, timeToWait, timeout) {
-                return new Promise((resolve) => {
-                    var period = timeToWait || 200;
-var triesLeftUntilReject = (timeout || 2000) / period;
-                    var interval = setInterval(() => {
-                        if (triesLeftUntilReject <= 0) {
-                            clearInterval(interval);
-                            return;
-                        }
-                        var element = selectFunc();
-                        if (element) {
-                            clearInterval(interval);
-                            resolve(element);
-                        }
-                        triesLeftUntilReject--;
-                    }, period);
-                });
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge">
+
+    <title>Netomi Web Chat - JWT Authentication</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 30px;
+        }
+
+        button {
+            padding: 10px 18px;
+            margin-right: 10px;
+            cursor: pointer;
+        }
+
+        #status {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            background: #f7f7f7;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h2>Netomi JWT Authentication Test</h2>
+
+    <button onclick="handleAuth()">
+        Start Authentication
+    </button>
+
+    <button onclick="endAuth()">
+        Clear Authentication
+    </button>
+
+    <div id="status">
+        Status: Waiting for authentication
+    </div>
+
+
+    <script>
+
+        /* =========================================================
+           CONFIGURATION
+        ========================================================= */
+
+        const BOT_REF_ID = "a5addd98-2627-437b-899c-2f97ff2e2b18";
+
+        const JWT_ENDPOINT =
+            "https://chatapps-qa-a.netomi.com/api/fetchJWT";
+
+        const HOST_PAGE =
+            "https://revanshasti.github.io/Hosting-sites/Authentication.html";
+
+        const USER_DETAILS = {
+            name: "Revan Shasti",
+            externalId: "revan@gmail.com"
+        };
+
+        let authIntervalId = null;
+        let netomiScriptLoaded = false;
+        let authenticationInProgress = false;
+
+
+        /* =========================================================
+           STATUS LOGGER
+        ========================================================= */
+
+        function updateStatus(message) {
+
+            console.log("[NETOMI AUTH]", message);
+
+            const statusElement =
+                document.getElementById("status");
+
+            if (statusElement) {
+                statusElement.innerText = "Status: " + message;
             }
-            function applyStyle() {
-                var globalStyle = window.getComputedStyle(document.body);
-                function reducer(arr, func, startState) {
-                    var acc = startState;
-                    for (var i = 0; i < arr.length; i++) {
-                        acc = func(acc, arr[i]);
-                    }
-                    return acc;
-                }
-var style = reducer([...styleWithPlaceholders.matchAll(/{(.+?)}/g)], (acc, n) => acc.replaceAll(n[0], globalStyle.getPropertyValue(n[1])), styleWithPlaceholders);
-                var s = document.createElement('style');
-s.type = 'text/css';
-                s.className = 'custom-style';
-                s.innerText = style;
-                var theme = localStorage.getItem("theme") || 'dark';
-                function insertStyle(element) {
-                    element.querySelector('.custom-style')?.remove();
-                    element.appendChild(s.cloneNode(true));
-                    for (var i = 0; i < element.children.length; i++) {
-                        var child = element.children[i];
-                        if (child.tagName == 'DIV') {
-                            child.setAttribute('data-theme', theme);
-                        }
-                    }
-                }
-                waitForElement(() => document.getElementsByClassName('sp-ac-frame')?.[0]?.contentDocument).then(chatIframeDoc => {
-                    waitForElement(() => chatIframeDoc.getElementsByTagName('html')?.[0]).then(chatIframeHtml => {
-                        insertStyle(chatIframeHtml);
-                        waitForElement(() => chatIframeDoc.getElementsByTagName('sn-component-va-web-client')?.[0]?.shadowRoot).then(snComponentVaWebClient => {
-                            insertStyle(snComponentVaWebClient);
-                            waitForElement(() => snComponentVaWebClient.querySelector('now-button.dismiss')).then(nbd => insertStyle(nbd.shadowRoot));
-                            waitForElement(() => snComponentVaWebClient.querySelector('now-toggle')).then(nt => insertStyle(nt.shadowRoot));
-                            waitForElement(() => snComponentVaWebClient.querySelector('now-icon')).then(nt => insertStyle(nt.shadowRoot));
-                            waitForElement(() => snComponentVaWebClient.querySelector('.sn-cs-input-container')).then(scic => {
-                                function iconContainerCallback() {
-                                    waitForElement(() => scic.querySelector('.custom-emoji-icon now-button-iconic')).then(nbi => {
-                                        insertStyle(nbi.shadowRoot);
-                                        var ni = nbi.shadowRoot.querySelector('now-icon');
-                                        insertStyle(ni.shadowRoot);
-                                    });
-                                    waitForElement(() => scic.querySelector('.attachment-button now-button-iconic')).then(nbi => {
-                                        insertStyle(nbi.shadowRoot);
-                                        var ni = nbi.shadowRoot.querySelector('now-icon');
-                                        insertStyle(ni.shadowRoot);
-                                    });
-                                    waitForElement(() => scic.querySelector('.send-button now-button-iconic')).then(nbi => {
-                                        insertStyle(nbi.shadowRoot);
-                                        var nisf = nbi.shadowRoot.querySelector('now-icon[icon="send-fill"]');
-                                        var niso = nbi.shadowRoot.querySelector('now-icon[icon="send-outline"]');
-                                        if (nisf) {
-                                            insertStyle(nisf.shadowRoot);
-                                        } else {
-                                            insertStyle(niso.shadowRoot);
-                                        }
-                                    });
-                                }
-                                if (document.iconContainerObserver) {
-                                    document.iconContainerObserver.disconnect();
-                                }
-                                document.iconContainerObserver = new MutationObserver(iconContainerCallback);
-                                document.iconContainerObserver.observe(scic, {
-                                    childList: true
-                                });
-                            });
-                            waitForElement(() => snComponentVaWebClient.querySelector('sn-connected-chat')?.shadowRoot).then(snConnectedChat => {
-                                insertStyle(snConnectedChat);
-                                waitForElement(() => snConnectedChat.querySelector('now-chat-window')?.shadowRoot).then(nowChatWindow => {
-                                    insertStyle(nowChatWindow);
-                                    waitForElement(() => nowChatWindow.querySelector('.message-window')).then(messageWindow => {
-                                        var updateChatMessage = (node) => {
-                                            insertStyle(node.shadowRoot);
-                                            waitForElement(() => node.shadowRoot.querySelector('now-avatar'), 25, 30000).then(na => {
-                                                insertStyle(na.shadowRoot);
-                                                waitForElement(() => node.shadowRoot.querySelector('sn-chat-control-text-picker')).then(scctp => insertStyle(scctp.shadowRoot));
-                                                waitForElement(() => node.shadowRoot.querySelector('sn-chat-control-topic-picker-message')).then(scctp => insertStyle(scctp.shadowRoot));
-                                                waitForElement(() => node.shadowRoot.querySelector('sn-chat-control-rich-text-message')).then(scctp => {
-                                                    insertStyle(scctp.shadowRoot);
-                                                    waitForElement(() => scctp.shadowRoot.querySelector('now-button-bare')).then(nbb => {
-                                                        insertStyle(nbb.shadowRoot);
-                                                        waitForElement(() => nbb.shadowRoot.querySelector('now-icon')).then(ni => {
-                                                            if (ni.getAttribute('icon') == "chevron-down-fill") {
-                                                                nbb.click();
-                                                            }
-                                                            insertStyle(ni.shadowRoot);
-                                                        });
-                                                    });
-                                                });
-                                            });
-                                        };
-                                        var callback = (mutationList, observer) => {
-                                            nowChatWindow.querySelectorAll('now-chat-message').forEach(ncm => {
-                                                updateChatMessage(ncm);
-                                            });
-                                            mutationList.forEach(mutation => {
-                                                mutation.addedNodes.forEach(node => {
-                                                    waitForElement(() => node.shadowRoot.querySelector('.now-chat-message')).then(() => {
-                                                        updateChatMessage(node);
-                                                    });
-                                                });
-                                            });
-                                        };
-                                        if (document.chatObserver) {
-                                            document.chatObserver.disconnect();
-                                        }
-                                        document.chatObserver = new MutationObserver(callback);
-                                        document.chatObserver.observe(messageWindow, {
-                                            childList: true
-                                        });
-                                        callback();
-                                    }, 5);
-                                }, 10);
-                            }, 20);
-                        });
+        }
+
+
+        /* =========================================================
+           LOAD NETOMI SCRIPT
+        ========================================================= */
+
+        (function loadNetomiScript() {
+
+            updateStatus("Loading Netomi widget...");
+
+            const ns = document.createElement("script");
+
+            ns.src =
+                "https://chatapps-qa-a.netomi.com/app/script.js";
+
+            ns.type = "text/javascript";
+            ns.async = true;
+
+            ns.setAttribute("botRefId", BOT_REF_ID);
+            ns.setAttribute("isDynamicEnv", "false");
+
+            const firstScript =
+                document.getElementsByTagName("script")[0];
+
+            firstScript.parentNode.insertBefore(
+                ns,
+                firstScript
+            );
+
+
+            ns.onload = function () {
+
+                console.log(
+                    "Netomi script loaded successfully"
+                );
+
+                netomiScriptLoaded = true;
+
+                updateStatus(
+                    "Netomi widget loaded. Click Start Authentication."
+                );
+
+
+                /*
+                 * Initialize the Netomi widget.
+                 */
+                if (
+                    window.NETOMI_WEB_WIDGET &&
+                    typeof window.NETOMI_WEB_WIDGET.init === "function"
+                ) {
+
+                    window.NETOMI_WEB_WIDGET.init(function () {
+
+                        console.log(
+                            "Netomi widget initialized successfully"
+                        );
+
+                        updateStatus(
+                            "Widget initialized. Ready for authentication."
+                        );
+
                     });
-                });
-            }
-            document.addEventListener("themeChange", applyStyle, false);
-            waitForElement(() => document.getElementsByClassName('sp-ac-frame')[0]).then(n => n.addEventListener("load", applyStyle));
-        }
-        var internalChatStyle = `
-			.project {
-				background-color: black !important;	
-			}
-			.picker-message-item {
-				background-color: #242424 !important;
-				color: white !important;
-				border-radius: 6px;
-				margin: 2px;
-			}
-			.sn-control-chat .sn-cs-button-message-control:active,
-			.open-all-topics-container .sn-cs-button-message-control:active {
-				background-color: transparent !important;
-			}
-			div.picker-message-list div.picker-message-item:focus {
-				box-shadow: none !important;
-				outline: none !important;
-				background-color: #3D3D3D !important;
-			}
-			div.picker-message-list div.picker-message-item:hover {
-				background-color: #3D3D3D !important;
-			}
-			.has-image .now-avatar-content, .header-circle {
-				background: transparent !important;
-			}
-			
-			.sn-control-chat.right .sn-cs-rich-text-height-wrapper .sn-cs-rich-text-container a {
-				color: #242424;
-			}
-			
-			.modal-button.confirm, .now-button.-primary.-sm {
-				background-color: #53D337 !important;
-			}
-			#first-conversation-tip {
-				background-color: #242424 !important;
-			}
-			.sn-cs-webclient .sn-cs-header .header-menu div.menu-item.new-conversation-clicker div div.first-conversation-tip div div.first-tooltip-header,
-			.first-conversation-tip div:not(.first-tooltip-header) {
-				color: white !important;
-			}
-			.now-chat-message-bubble.left {
-				background-color: RGB(45, 45, 45) !important;
-			}
-			.now-chat-message-bubble.left.loading {
-				background-color: transparent !important;
-			}
-			
-			.now-button-bare-label, svg {
-				color: #436D1A !important;
-			}
-			
-			.now-button-bare-label:hover, svg:hover {
-				color: #29420F !important;
-			}
-			
-			
-			.recipient-title h1 {
-				overflow: visible !important;
-			}
-			
-			.sn-chat-input-element::placeholder {
-				text-wrap: nowrap !important;
-			}
-			.sn-chat-input-control.disabled {
-				opacity: 0.50 !important;
-			}
-			.sn-chat-input-control.disabled .sn-chat-input-element {
-				background-color: transparent !important;
-			}
-			.sn-chat-input-control.disabled .sn-chat-input-element::placeholder {
-				color: white !important;
-			}
-			
-			.emoji-search-input {
-				outline: none;
-			}
-			
-			.now-toggle.is-checked {
-				background-color: #3FB027 !important;
-			}
-			
-            --modal_header_bg_color: #242424 !important;
-			
-			.modal-button, #all-topic-picker {
-				border-color: #61b510 !important;
-			}
-			
-			#all-topic-picker {
-				color: #61b510 !important;
-			}
-            [data-theme="light"] {
-                --chat-window-background-color: 255, 255, 255;
-                --header-background-color:230 230 230;
-                --header-font-color: #121212 !important;
-                --system-message-color: 18, 18, 18 !important;
-                --input-frame-color: 255, 255, 255;
-                --button-background-color: 180, 180, 180;
-                --bot-message-bubble-font-color: 18, 18, 18;
-                --button_selection_text_color: 18, 18, 18;
-                --input_field_text_color: 18, 18, 18 !important;
-                --seperator-color: 230, 230, 230;
-                --modal_header_bg_color: 230 230 230 !important;
-                --non_clickable_title_color: 18, 18, 18 !important;
-                --modal_body_bg_color: 245, 245, 245 !important;
-                --tooltip_bg_color: 230, 230, 230 !important;
-                --tooltip_text_color: 18, 18, 18 !important;
-                --hover_bg_multichoice_color: 120, 120, 120 !important;
-                --now-pill--background-color-hover: 120, 120, 120 !important;
-								--agent-message-bubble-font-color: 18, 18, 18;
-                .now-chat-message-bubble.left {
-				    background-color: RGB(230, 230, 230) !important;
-			    }
-                .now-chat-message-bubble.left.loading {
-				    background-color: transparent !important;
-			    }
-                .now-icon {
-				    fill: #436D1A !important;
-			    }
-                .sn-cs-modal-inner {
-                    border: 1px solid black;
-                }
-                .sn-cs-tool-tip {
-                    border: 1px solid black;
-                }
-                .now-pill-label:hover {
-                color: green;
-                }
-                .tooltip-inner {
-                background-color: grey !important;
-                }
-            }
-			
-			`;
-        applyInternalChatStyle(internalChatStyle);
-    }
-    styleChat();
-	
-	
-    function styleNetomiChat() {
-        function applyInternalChatStyle(style) {
-            var styleWithPlaceholders = style;
-            function waitForElement(selectFunc, timeToWait, timeout) {
-                return new Promise((resolve) => {
-                    var period = timeToWait || 200;
-var triesLeftUntilReject = (timeout || 2000) / period;
-                    var interval = setInterval(() => {
-                        if (triesLeftUntilReject <= 0) {
-                            clearInterval(interval);
-                            return;
-                        }
-                        var element = selectFunc();
-                        if (element) {
-                            clearInterval(interval);
-                            resolve(element);
-                        }
-                        triesLeftUntilReject--;
-                    }, period);
-                });
-            }
-            function applyStyle() {
-                var globalStyle = window.getComputedStyle(document.body);
-                function reducer(arr, func, startState) {
-                    var acc = startState;
-                    for (var i = 0; i < arr.length; i++) {
-                        acc = func(acc, arr[i]);
-                    }
-                    return acc;
-                }
-var style = reducer([...styleWithPlaceholders.matchAll(/{(.+?)}/g)], (acc, n) => acc.replaceAll(n[0], globalStyle.getPropertyValue(n[1])), styleWithPlaceholders);
-                var s = document.createElement('style');
-s.type = 'text/css';
-                s.className = 'custom-style';
-                s.innerText = style;
-                var theme = localStorage.getItem("theme") || 'dark';
-                function insertStyle(element) {
-                    element.querySelector('.custom-style')?.remove();
-                    element.appendChild(s.cloneNode(true));
-										element.setAttribute('data-theme', theme);
-                }
-                waitForElement(() => document.getElementById('netomiChatWindow')?.contentDocument).then(chatIframeDoc => {
-                    waitForElement(() => chatIframeDoc.getElementsByTagName('html')?.[0]).then(chatIframeHtml => {
-                        insertStyle(chatIframeHtml);
-                    });
-                });
-            }
-            document.addEventListener("themeChange", applyStyle, false);
-            waitForElement(() => document.getElementById('netomiChatWindow')).then(n => {
-							applyStyle();
-							n.addEventListener("load", applyStyle);
-						});
-        }
-        var internalChatStyle = `
-				[data-theme="dark"] .support-icon-image {
-					filter: brightness(0);
-				}
-				.support-icon {
-					border-radius: 999px !important;
-					background: {--main-link-color} !important;
-					
-					&:hover {
-						background: {--main-link-hover-color} !important;
-					}
-				}
-			`;
-        applyInternalChatStyle(internalChatStyle);
-    }
-		styleNetomiChat();
-	
-    c.showCSMTermsandConditions = function() {
-        var modalInstance = $uibModal.open({
-            templateUrl: 'community-terms-conditions',
-            ariaLabelledBy: 'modal-title',
-            ariaDescribedBy: 'modal-body',
-            size: 'lg',
-            controller: function($scope, $sce) {
-                $scope.content = c.data._tc_content;
-                $scope.cancel = function() {
-                    modalInstance.dismiss('cancel');
-                };
-                $scope.convertHtml = $sce.trustAsHtml(c.data._tc_content);
-            }
-        });
-    }
-    c.getDevice = function() {
-        var userAgent = window.navigator.userAgent;
-        var userAgentData = window.navigator.userAgentData || {};
-        var legacyPlatform = window.navigator.platform;
-        var platform = userAgentData.platform || legacyPlatform;
-        var macosPlatforms = ['Macintosh', 'MacIntel', 'MacPPC', 'Mac68K', 'macOS'];
-        var windowsPlatforms = ['Win32', 'Win64', 'Windows', 'WinCE'];
-        if (windowsPlatforms.indexOf(platform) !== -1 ||
-            macosPlatforms.indexOf(platform) !== -1 ||
-/Linux/.test(platform) || /Mac/.test(platform)) {
-            return 'Desktop';
-        }
-if (/iPad|iPhone|iPod/.test(userAgent) && !window.MSStream) {
-            return 'iOS';
-        }
-if (/Android/i.test(userAgent) || /Android/i.test(platform)) {
-            return 'Android';
-        }
-        return 'Unknown'
-    }
-    c.getGeolocation = async function() {
-        try {
-var response = await fetch(c.data.baseUrl + '/geolocations/v1/locations');
-            if (response.status >= 400) {
-                return null;
-            }
-            var result = await response.json();
-            return result.location;
-        } catch {
-            return null;
-        }
-    }
-    c.getAppInfo = function() {
-var regex = /appId=(?<appId>[^&]+).*?appVersion=(?<appVersion>[^&]+)/;
-        var native = document.cookie.split(';').find(cookie => cookie.trim().startsWith('Native='));
-        if (native) {
-            var match = native.match(regex);
-            if (match) {
-                var {
-                    appId,
-                    appVersion
-                } = match.groups;
-                return {
-                    appId,
-                    appVersion
-                };
-            }
-        }
-        return {};
-    }
-    var {
-        appId,
-        appVersion
-    } = c.getAppInfo();
-    var approximateGeolocation = c.data.approximateGeolocation || await c.getGeolocation();
-    c.data.metadata = {
-        device: c.getDevice(),
-        brand: 'dk',
-        approximateGeolocation: approximateGeolocation,
-        appId: appId,
-        appversion: appVersion
-    };
-    let reAuthenticateIntervalId = '';
-    async function authenticate() {
-        const token = await fetchToken()
-        if (token != '') {
-            Netomi.chat.login(token)
-        } else {
-var ncwUserLoggedIn = document.cookie.match(/(?:^|;\s*)net_userLoggedIn=([^;]+)/)?.[1];
-            if (ncwUserLoggedIn == 'true') {
-                endAuth();
-            }
-        }
-        Netomi.chat.publish('VISITOR_INFO', {
-            approximateGeolocation: approximateGeolocation,
-            appId: appId,
-            appversion: appVersion,
-            language: c.data.langCode,
-            device: c.getDevice(),
-            brand: 'dk'
-        });
-        reAuthenticateIntervalId = setInterval(() => {
-            Netomi.chat.authenticate(async sendTokenToNetomi => {
-                const token = await fetchToken()
-                if (token != '') {
-                    sendTokenToNetomi(token, handleAuthError);
+
                 } else {
-var ncwUserLoggedIn = document.cookie.match(/(?:^|;\s*)net_userLoggedIn=([^;]+)/)?.[1];
-                    if (ncwUserLoggedIn == 'true') {
-                        endAuth();
+
+                    console.error(
+                        "NETOMI_WEB_WIDGET.init is not available"
+                    );
+
+                    updateStatus(
+                        "Netomi widget initialization failed."
+                    );
+                }
+            };
+
+
+            ns.onerror = function () {
+
+                console.error(
+                    "Failed to load Netomi script"
+                );
+
+                updateStatus(
+                    "Failed to load Netomi script."
+                );
+            };
+
+        })();
+
+
+        /* =========================================================
+           FETCH JWT
+        ========================================================= */
+
+        async function fetchToken() {
+
+            console.log(
+                "Requesting JWT from:",
+                JWT_ENDPOINT
+            );
+
+            const response = await fetch(
+                JWT_ENDPOINT,
+                {
+                    method: "POST",
+
+                    headers: {
+
+                        "href": HOST_PAGE,
+
+                        "Content-Type":
+                            "application/json",
+
+                        "x-token-expiry":
+                            "10m",
+
+                        "x-bot-ref-id":
+                            BOT_REF_ID,
+
+                        "x-user-details":
+                            JSON.stringify(USER_DETAILS)
                     }
                 }
-            })
-}, 60000)
-    }
-    async function fetchToken() {
-        return new Promise(function(resolve) {
-            const dkPortalAjaxUtils = new GlideAjax('global.DKPortalAjaxUtils');
-            dkPortalAjaxUtils.addParam('sysparm_name', 'getNetomiAuthenticationToken');
-            dkPortalAjaxUtils.addParam('brand', 'dk');
-            dkPortalAjaxUtils.getXMLAnswer(function(jwt) {
-                resolve(jwt || '');
-            });
-        });
-    }
-    function handleAuthError() {
-        console.log('handleAuthError');
-    }
-    c.renderNetomiGenAiWidget = function() {
-        var ns = document.createElement('script');
-ns.src = ('https://chatapps-qa-a.netomi.com/app/script.js');
-ns.type = 'text/javascript';
-				ns.async = true;
-				ns.setAttribute('botRefId', f8997270-9f62-4315-9de9-d743e587d5bb);
-			  ns.setAttribute('enableEventQueue', 'true');
-				var s = document.getElementsByTagName('script')[0];
-				s.parentNode.insertBefore(ns, s);
-				ns.onload = function () {
-						authenticate();
-				}
-    }
-    var validNetomiPage = !c.data.netomiWidgetPage || (window.location.href == c.data.netomiWidgetPage);
-    	if (c.data.netomiGenAiWidget && !noChat && validNetomiPage) {
-					c.renderNetomiGenAiWidget();
-			} else if (!noChat) {
-					styleChat();
-			}
-    c.server.update().then(function(resp) {
-        $rootScope.$broadcast('geolocationResolved');
-        if (c.data && c.data.langChanged) {
-            var url = new URL(location.href);
-            var newLang = c.data.newLang;
-            var langParam = url.searchParams.get('lang');
-            if (langParam && langParam != newLang) {
-                url.searchParams.set('lang', newLang);
+            );
+
+
+            if (!response.ok) {
+
+                throw new Error(
+                    "JWT API failed. HTTP status: " +
+                    response.status
+                );
             }
-if (url.href.includes('/en/')) {
-url.href = url.href.replaceAll('/en/', '/');
+
+
+            const data =
+                await response.json();
+
+
+            console.log(
+                "JWT response received"
+            );
+
+
+            if (!data.token) {
+
+                throw new Error(
+                    "JWT response does not contain token"
+                );
             }
-            location.replace(url.href);
+
+
+            return data.token;
         }
-    });
-})
+
+
+        /* =========================================================
+           AUTHENTICATE USER
+        ========================================================= */
+
+        async function handleAuth() {
+
+            if (authenticationInProgress) {
+
+                console.log(
+                    "Authentication already in progress."
+                );
+
+                return;
+            }
+
+
+            authenticationInProgress = true;
+
+
+            try {
+
+                updateStatus(
+                    "Starting authentication..."
+                );
+
+
+                /*
+                 * Make sure Netomi script has loaded.
+                 */
+
+                if (!netomiScriptLoaded) {
+
+                    throw new Error(
+                        "Netomi script has not loaded yet."
+                    );
+                }
+
+
+                /*
+                 * Make sure authModule is available.
+                 */
+
+                if (
+                    !window.NETOMI_WEB_WIDGET ||
+                    !window.NETOMI_WEB_WIDGET.authModule
+                ) {
+
+                    throw new Error(
+                        "Netomi authModule is not available."
+                    );
+                }
+
+
+                updateStatus(
+                    "Fetching JWT..."
+                );
+
+
+                /*
+                 * Get initial JWT.
+                 */
+
+                const token =
+                    await fetchToken();
+
+
+                console.log(
+                    "Initial JWT received"
+                );
+
+
+                /*
+                 * Login using Netomi authModule.
+                 */
+
+                window.NETOMI_WEB_WIDGET
+                    .authModule
+                    .login(token);
+
+
+                console.log(
+                    "Netomi authentication successful"
+                );
+
+
+                updateStatus(
+                    "Authenticated successfully."
+                );
+
+
+                /*
+                 * Prevent multiple intervals.
+                 */
+
+                if (authIntervalId) {
+
+                    clearInterval(
+                        authIntervalId
+                    );
+                }
+
+
+                /*
+                 * Renew authentication periodically.
+                 *
+                 * JWT expires in 10 minutes.
+                 * Renew every 5 minutes.
+                 */
+
+                authIntervalId = setInterval(
+                    async function () {
+
+                        try {
+
+                            console.log(
+                                "Refreshing Netomi JWT..."
+                            );
+
+
+                            window.NETOMI_WEB_WIDGET
+                                .authModule
+                                .jwtAuth(
+                                    async function (
+                                        sendTokenToNetomi
+                                    ) {
+
+                                        try {
+
+                                            const newToken =
+                                                await fetchToken();
+
+
+                                            /*
+                                             * Send the refreshed
+                                             * JWT to Netomi.
+                                             */
+
+                                            sendTokenToNetomi(
+                                                newToken,
+                                                handleAuthError
+                                            );
+
+
+                                            console.log(
+                                                "JWT refreshed successfully"
+                                            );
+
+
+                                            updateStatus(
+                                                "Authenticated. JWT refreshed."
+                                            );
+
+                                        } catch (error) {
+
+                                            console.error(
+                                                "JWT refresh failed:",
+                                                error
+                                            );
+
+                                            updateStatus(
+                                                "JWT refresh failed."
+                                            );
+                                        }
+                                    }
+                                );
+
+                        } catch (error) {
+
+                            console.error(
+                                "Authentication renewal failed:",
+                                error
+                            );
+
+                            updateStatus(
+                                "Authentication renewal failed."
+                            );
+                        }
+
+                    },
+                    5 * 60 * 1000
+                );
+
+
+                /*
+                 * Open the widget after successful authentication.
+                 *
+                 * This is intentionally AFTER login.
+                 */
+
+                setTimeout(function () {
+
+                    if (
+                        window.Netomi &&
+                        window.Netomi.chat &&
+                        typeof window.Netomi.chat.openWidget === "function"
+                    ) {
+
+                        console.log(
+                            "Opening Netomi widget..."
+                        );
+
+                        window.Netomi.chat.openWidget();
+                    }
+
+                }, 500);
+
+
+            } catch (error) {
+
+                console.error(
+                    "Authentication failed:",
+                    error
+                );
+
+                updateStatus(
+                    "Authentication failed: " +
+                    error.message
+                );
+
+            } finally {
+
+                authenticationInProgress = false;
+            }
+        }
+
+
+        /* =========================================================
+           AUTHENTICATION ERROR
+        ========================================================= */
+
+        function handleAuthError(error) {
+
+            console.error(
+                "Netomi authentication error:",
+                error
+            );
+
+            updateStatus(
+                "Netomi authentication error."
+            );
+        }
+
+
+        /* =========================================================
+           LOGOUT / CLEAR AUTHENTICATION
+        ========================================================= */
+
+        function endAuth() {
+
+            console.log(
+                "Clearing Netomi authentication..."
+            );
+
+
+            /*
+             * Stop JWT renewal.
+             */
+
+            if (authIntervalId) {
+
+                clearInterval(
+                    authIntervalId
+                );
+
+                authIntervalId = null;
+            }
+
+
+            /*
+             * Logout from Netomi.
+             */
+
+            try {
+
+                if (
+                    window.NETOMI_WEB_WIDGET &&
+                    window.NETOMI_WEB_WIDGET.authModule &&
+                    typeof window.NETOMI_WEB_WIDGET.authModule.logout === "function"
+                ) {
+
+                    window.NETOMI_WEB_WIDGET
+                        .authModule
+                        .logout();
+
+                }
+
+            } catch (error) {
+
+                console.error(
+                    "Logout failed:",
+                    error
+                );
+            }
+
+
+            updateStatus(
+                "Authentication cleared."
+            );
+        }
+
+    </script>
+
+</body>
+
+</html>
