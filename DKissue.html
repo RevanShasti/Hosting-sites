@@ -47,9 +47,9 @@
         "https://chatapps-qa-a.netomi.com/api/fetchJWT";
 
     const HOST_PAGE =
-        "https://revanshasti.github.io/Hosting-sites/DKissue.html";
+        "https://revanshasti.github.io/Hosting-sites/Authentication.html";
 
-    const TOKEN_EXPIRY = "5m";
+    const TOKEN_EXPIRY = "10m";
 
     const USER_DETAILS = {
         name: "Revan Shasti",
@@ -462,7 +462,7 @@
     /* =========================================================
      * AUTHENTICATE
      *
-     * IMPORTANT CHANGE:
+     * Triggered by the first widget click:
      *
      * Initial login uses:
      *
@@ -645,6 +645,228 @@
         updateStatus(
             "Authentication cleared."
         );
+    }
+
+
+    /* =========================================================
+     * AUTHENTICATION CLICK GUARD
+     *
+     * The Netomi widget lives in a cross-origin iframe, so a normal
+     * document click listener cannot see the click on the widget icon.
+     *
+     * This one-time transparent overlay captures the FIRST click on the
+     * minimized widget, authenticates the user, removes itself, and then
+     * opens the widget through the Netomi API.
+     * ========================================================= */
+
+    let authenticationClickGuard = null;
+    let authenticationClickGuardTimer = null;
+    let authenticationStartedByWidgetClick = false;
+
+
+    function findNetomiChatIframe() {
+        return (
+            document.getElementById("netomiChatWindow") ||
+            document.querySelector('iframe[id*="netomiChatWindow"]') ||
+            document.querySelector('iframe[src*="netomi"]')
+        );
+    }
+
+
+    function positionAuthenticationClickGuard() {
+        if (!authenticationClickGuard) {
+            return;
+        }
+
+        const iframe = findNetomiChatIframe();
+
+        if (!iframe) {
+            return;
+        }
+
+        const rect = iframe.getBoundingClientRect();
+
+        if (
+            rect.width <= 0 ||
+            rect.height <= 0
+        ) {
+            authenticationClickGuard.style.display = "none";
+            return;
+        }
+
+        authenticationClickGuard.style.display = "block";
+        authenticationClickGuard.style.left = rect.left + "px";
+        authenticationClickGuard.style.top = rect.top + "px";
+        authenticationClickGuard.style.width = rect.width + "px";
+        authenticationClickGuard.style.height = rect.height + "px";
+    }
+
+
+    function removeAuthenticationClickGuard() {
+        if (authenticationClickGuard) {
+            authenticationClickGuard.remove();
+            authenticationClickGuard = null;
+        }
+
+        if (authenticationClickGuardTimer) {
+            clearInterval(authenticationClickGuardTimer);
+            authenticationClickGuardTimer = null;
+        }
+
+        window.removeEventListener(
+            "resize",
+            positionAuthenticationClickGuard
+        );
+
+        window.removeEventListener(
+            "scroll",
+            positionAuthenticationClickGuard,
+            true
+        );
+    }
+
+
+    async function handleFirstWidgetClick() {
+        if (authenticationStartedByWidgetClick) {
+            return;
+        }
+
+        authenticationStartedByWidgetClick = true;
+
+        console.log(
+            "[NETOMI-DK] Widget clicked - starting authentication"
+        );
+
+        updateStatus(
+            "Widget clicked. Starting authentication..."
+        );
+
+        try {
+            await authenticate();
+
+            /*
+             * Authentication has completed. Only now allow interaction
+             * with the real iframe.
+             */
+            removeAuthenticationClickGuard();
+
+            console.log(
+                "[NETOMI-DK] Authentication completed after widget click"
+            );
+
+            /*
+             * Re-open the widget because the original click was consumed
+             * by the authentication guard.
+             *
+             * Prefer Netomi.chat.openWidget(), which is the public widget
+             * API used by the existing Netomi integration.
+             */
+            if (
+                window.Netomi &&
+                window.Netomi.chat &&
+                typeof window.Netomi.chat.openWidget === "function"
+            ) {
+                console.log(
+                    "[NETOMI-DK] Opening widget after authentication"
+                );
+
+                window.Netomi.chat.openWidget();
+
+            } else if (
+                window.NETOMI_WEB_WIDGET &&
+                typeof window.NETOMI_WEB_WIDGET.openWidget === "function"
+            ) {
+                console.log(
+                    "[NETOMI-DK] Opening widget through NETOMI_WEB_WIDGET"
+                );
+
+                window.NETOMI_WEB_WIDGET.openWidget();
+
+            } else {
+                console.warn(
+                    "[NETOMI-DK] No public openWidget() API found. User can click the widget again."
+                );
+            }
+
+        } catch (error) {
+            authenticationStartedByWidgetClick = false;
+
+            console.error(
+                "[NETOMI-DK] Authentication triggered by widget click failed:",
+                error
+            );
+
+            updateStatus(
+                "Authentication failed: " +
+                error.message
+            );
+        }
+    }
+
+
+    function createAuthenticationClickGuard() {
+        if (authenticationClickGuard) {
+            return;
+        }
+
+        const guard = document.createElement("div");
+
+        guard.id = "netomiAuthenticationClickGuard";
+
+        guard.style.position = "fixed";
+        guard.style.zIndex = "2147483647";
+        guard.style.background = "transparent";
+        guard.style.cursor = "pointer";
+        guard.style.display = "none";
+        guard.style.pointerEvents = "auto";
+
+        guard.addEventListener(
+            "click",
+            function (event) {
+                event.preventDefault();
+                event.stopPropagation();
+                event.stopImmediatePropagation();
+
+                handleFirstWidgetClick();
+            },
+            true
+        );
+
+        document.body.appendChild(guard);
+
+        authenticationClickGuard = guard;
+
+        positionAuthenticationClickGuard();
+
+        window.addEventListener(
+            "resize",
+            positionAuthenticationClickGuard
+        );
+
+        window.addEventListener(
+            "scroll",
+            positionAuthenticationClickGuard,
+            true
+        );
+
+        /*
+         * The iframe is created asynchronously by the widget, so keep
+         * repositioning until it becomes visible.
+         */
+        authenticationClickGuardTimer =
+            setInterval(
+                positionAuthenticationClickGuard,
+                250
+            );
+
+        console.log(
+            "[NETOMI-DK] Waiting for first widget click to authenticate"
+        );
+    }
+
+
+    function setupAuthenticationClickGuard() {
+        createAuthenticationClickGuard();
     }
 
 
@@ -845,26 +1067,35 @@
                 );
 
                 console.log(
-                    "[NETOMI-DK] Widget initialization completed. Starting authentication..."
+                    "[NETOMI-DK] Widget initialization completed."
                 );
 
-
                 /*
-                 * Authenticate only AFTER NETOMI_WEB_WIDGET.init()
-                 * has completed.
-                 */
-                await authenticate();
-
-
-                /*
-                 * Do NOT manually open the widget.
+                 * IMPORTANT:
                  *
-                 * The native Netomi floating icon remains
-                 * responsible for opening the widget.
+                 * Do NOT authenticate automatically on page load.
+                 *
+                 * The known-working basic HTML authenticates only after
+                 * the user starts interacting with the widget. That gives
+                 * the widget its normal pre-conversation lifecycle.
+                 *
+                 * We cannot listen for a click INSIDE the cross-origin
+                 * Netomi iframe from the parent document. Therefore we
+                 * place a transparent one-time click guard over the
+                 * minimized widget. The first click authenticates the user,
+                 * then the guard is removed and the widget is opened.
+                 *
+                 * This makes the lifecycle deterministic:
+                 *
+                 *   user clicks widget
+                 *       -> authenticate
+                 *       -> MQTT starts
+                 *       -> remove guard
+                 *       -> open widget
+                 *       -> native New Conversation Started pill
+                 *       -> user sends message
                  */
-                console.log(
-                    "[NETOMI-DK] Ready - user can now click the widget"
-                );
+                setupAuthenticationClickGuard();
             };
 
 
