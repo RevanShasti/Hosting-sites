@@ -1004,27 +1004,64 @@
                     console.log(
                         "[NETOMI-DK] Netomi.chat is ready"
                     );
-                    /*
- * Initialize the Netomi widget.
- */
+                    /* =========================================================
+ *
+ * NETOMI NEW CONVERSATION HANDLER
+ *
+ * This allows the Netomi widget to complete its
+ * native new-conversation lifecycle.
+ *
+ * ========================================================= */
+
 if (
-    window.NETOMI_WEB_WIDGET &&
-    typeof window.NETOMI_WEB_WIDGET.init === "function"
+    window.Netomi &&
+    window.Netomi.chat &&
+    typeof window.Netomi.chat.onNewConversation === "function"
 ) {
 
     console.log(
-        "[NETOMI-DK] Initializing NETOMI_WEB_WIDGET..."
+        "[NETOMI-DK] Registering onNewConversation handler"
     );
 
-    window.NETOMI_WEB_WIDGET.init(function () {
+    window.Netomi.chat.onNewConversation(function (data) {
 
         console.log(
-            "[NETOMI-DK] NETOMI_WEB_WIDGET initialized"
+            "[NETOMI-DK] New conversation event received:",
+            data
         );
 
-    });
-}
+        /*
+         * IMPORTANT:
+         *
+         * Tell Netomi that our new-conversation
+         * callback has completed.
+         */
+        if (
+            data &&
+            typeof data.done === "function"
+        ) {
 
+            console.log(
+                "[NETOMI-DK] Calling new conversation done()"
+            );
+
+            data.done();
+
+        } else {
+
+            console.warn(
+                "[NETOMI-DK] onNewConversation data.done() is unavailable"
+            );
+        }
+
+    });
+
+} else {
+
+    console.warn(
+        "[NETOMI-DK] Netomi.chat.onNewConversation() is not available"
+    );
+}
 
 
                     /*
