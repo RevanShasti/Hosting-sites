@@ -49,7 +49,7 @@
     const HOST_PAGE =
         "https://revanshasti.github.io/Hosting-sites/DKissue.html";
 
-    const TOKEN_EXPIRY = "10m";
+    const TOKEN_EXPIRY = "5m";
 
     const USER_DETAILS = {
         name: "Revan Shasti",
@@ -553,13 +553,22 @@
 
 
             /*
-             * Preserve DK visitor information.
+             * IMPORTANT:
+             *
+             * Do not publish VISITOR_INFO here.
+             *
+             * The known-working basic authentication page does not
+             * publish an event after login. Keeping this authentication
+             * path identical avoids introducing an extra widget event
+             * into the conversation lifecycle.
              */
-            publishVisitorInfo();
+            console.log(
+                "[NETOMI-DK] Skipping VISITOR_INFO publish to match working basic auth flow"
+            );
 
 
             /*
-             * Start 60-second renewal.
+             * Start JWT renewal.
              */
             startReAuthentication();
 
