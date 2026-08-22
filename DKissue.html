@@ -3,13 +3,8 @@
 
 <head>
     <meta charset="utf-8" />
-
-    <meta name="viewport"
-          content="width=device-width, initial-scale=1.0" />
-
-    <meta http-equiv="X-UA-Compatible"
-          content="IE=Edge" />
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <title>Netomi DK Authentication Test</title>
 
     <style>
@@ -31,1113 +26,847 @@
     </style>
 </head>
 
-
 <body>
 
-    <h2>Netomi DK Authentication Test</h2>
+<h2>Netomi DK Authentication Test</h2>
 
-    <div id="status">
-        Loading Netomi...
-    </div>
+<div id="status">Loading Netomi...</div>
 
+<script>
+    /* =========================================================
+     * CONFIGURATION
+     * ========================================================= */
 
-    <script>
+    const BOT_REF_ID =
+        "a5addd98-2627-437b-899c-2f97ff2e2b18";
 
-        /* =========================================================
-         *
-         * CONFIGURATION
-         *
-         * ========================================================= */
+    const NETOMI_SCRIPT =
+        "https://chatapps-qa-a.netomi.com/app/script.js";
 
-        const BOT_REF_ID =
-            "a5addd98-2627-437b-899c-2f97ff2e2b18";
+    const JWT_ENDPOINT =
+        "https://chatapps-qa-a.netomi.com/api/fetchJWT";
 
+    const HOST_PAGE =
+        "https://revanshasti.github.io/Hosting-sites/DKissue.html";
 
-        const NETOMI_SCRIPT =
-            "https://chatapps-qa-a.netomi.com/app/script.js";
+    const TOKEN_EXPIRY = "10m";
 
+    const USER_DETAILS = {
+        name: "Revan Shasti",
+        externalId: "revan@gmail.com"
+    };
 
-        const JWT_ENDPOINT =
-            "https://chatapps-qa-a.netomi.com/api/fetchJWT";
-
-
-        const HOST_PAGE =
-            "https://revanshasti.github.io/Hosting-sites/DKissue.html";
-
-
-        const TOKEN_EXPIRY =
-            "10m";
-
-
-        const USER_DETAILS = {
-            name: "Revan Shasti",
-            externalId: "revan@gmail.com"
-        };
+    /*
+     * Keep the DK renewal behavior:
+     * first renewal occurs 60 seconds after login.
+     */
+    const REAUTHENTICATION_INTERVAL = 60000;
 
 
-        /*
-         * Same interval as DK.
-         *
-         * DK:
-         *
-         * setInterval(..., 60000)
-         */
-        const REAUTHENTICATION_INTERVAL =
-            60000;
+    /* =========================================================
+     * STATE
+     * ========================================================= */
+
+    let reAuthenticateIntervalId = null;
+    let authenticationInProgress = false;
+    let authenticated = false;
 
 
-        /* =========================================================
-         *
-         * STATE
-         *
-         * ========================================================= */
+    /* =========================================================
+     * STATUS / LOGGING
+     * ========================================================= */
 
-        let reAuthenticateIntervalId = null;
+    function updateStatus(message) {
+        console.log("[NETOMI-DK]", message);
 
-        let authenticationInProgress = false;
+        const status = document.getElementById("status");
 
-        let authenticated = false;
+        if (status) {
+            status.textContent = message;
+        }
+    }
 
 
-        /* =========================================================
-         *
-         * STATUS / DEBUG
-         *
-         * ========================================================= */
+    /* =========================================================
+     * DEVICE
+     * ========================================================= */
 
-        function updateStatus(message) {
+    function getDevice() {
+        const userAgent = window.navigator.userAgent;
+        const userAgentData = window.navigator.userAgentData || {};
+        const platform =
+            userAgentData.platform ||
+            window.navigator.platform;
+
+        const macosPlatforms = [
+            "Macintosh",
+            "MacIntel",
+            "MacPPC",
+            "Mac68K",
+            "macOS"
+        ];
+
+        const windowsPlatforms = [
+            "Win32",
+            "Win64",
+            "Windows",
+            "WinCE"
+        ];
+
+        if (
+            windowsPlatforms.indexOf(platform) !== -1 ||
+            macosPlatforms.indexOf(platform) !== -1 ||
+            /Linux/.test(platform) ||
+            /Mac/.test(platform)
+        ) {
+            return "Desktop";
+        }
+
+        if (
+            /iPad|iPhone|iPod/.test(userAgent) &&
+            !window.MSStream
+        ) {
+            return "iOS";
+        }
+
+        if (
+            /Android/i.test(userAgent) ||
+            /Android/i.test(platform)
+        ) {
+            return "Android";
+        }
+
+        return "Unknown";
+    }
+
+
+    /* =========================================================
+     * APP INFO
+     * ========================================================= */
+
+    function getAppInfo() {
+        const regex =
+            /appId=(?<appId>[^&]+).*?appVersion=(?<appVersion>[^&]+)/;
+
+        const nativeCookie =
+            document.cookie
+                .split(";")
+                .find(cookie =>
+                    cookie.trim().startsWith("Native=")
+                );
+
+        if (nativeCookie) {
+            const match = nativeCookie.match(regex);
+
+            if (match) {
+                const {
+                    appId,
+                    appVersion
+                } = match.groups;
+
+                return {
+                    appId,
+                    appVersion
+                };
+            }
+        }
+
+        return {};
+    }
+
+    const {
+        appId,
+        appVersion
+    } = getAppInfo();
+
+
+    /*
+     * Geolocation is intentionally not requested.
+     * The standalone page previously received 403 from the
+     * geolocation endpoint and DK treats it as optional.
+     */
+    const approximateGeolocation = null;
+
+
+    /* =========================================================
+     * FETCH JWT
+     * ========================================================= */
+
+    async function fetchToken() {
+        updateStatus("Fetching JWT...");
+
+        try {
+            const response = await fetch(
+                JWT_ENDPOINT,
+                {
+                    method: "POST",
+                    headers: {
+                        "href": HOST_PAGE,
+                        "Content-Type": "application/json",
+                        "x-token-expiry": TOKEN_EXPIRY,
+                        "x-bot-ref-id": BOT_REF_ID,
+                        "x-user-details":
+                            JSON.stringify(USER_DETAILS)
+                    }
+                }
+            );
 
             console.log(
-                "[NETOMI-DK]",
-                message
+                "[NETOMI-DK] JWT API status:",
+                response.status
             );
 
-
-            const status =
-                document.getElementById("status");
-
-
-            if (status) {
-                status.textContent =
-                    message;
-            }
-        }
-
-
-        /* =========================================================
-         *
-         * DEVICE
-         *
-         * Same logic as DK getDevice()
-         *
-         * ========================================================= */
-
-        function getDevice() {
-
-            const userAgent =
-                window.navigator.userAgent;
-
-
-            const userAgentData =
-                window.navigator.userAgentData || {};
-
-
-            const legacyPlatform =
-                window.navigator.platform;
-
-
-            const platform =
-                userAgentData.platform ||
-                legacyPlatform;
-
-
-            const macosPlatforms = [
-                "Macintosh",
-                "MacIntel",
-                "MacPPC",
-                "Mac68K",
-                "macOS"
-            ];
-
-
-            const windowsPlatforms = [
-                "Win32",
-                "Win64",
-                "Windows",
-                "WinCE"
-            ];
-
-
-            if (
-                windowsPlatforms.indexOf(platform) !== -1 ||
-                macosPlatforms.indexOf(platform) !== -1 ||
-                /Linux/.test(platform) ||
-                /Mac/.test(platform)
-            ) {
-
-                return "Desktop";
-            }
-
-
-            if (
-                /iPad|iPhone|iPod/.test(userAgent) &&
-                !window.MSStream
-            ) {
-
-                return "iOS";
-            }
-
-
-            if (
-                /Android/i.test(userAgent) ||
-                /Android/i.test(platform)
-            ) {
-
-                return "Android";
-            }
-
-
-            return "Unknown";
-        }
-
-
-        /* =========================================================
-         *
-         * APP INFO
-         *
-         * Same concept as DK getAppInfo()
-         *
-         * ========================================================= */
-
-        function getAppInfo() {
-
-            const regex =
-                /appId=(?<appId>[^&]+).*?appVersion=(?<appVersion>[^&]+)/;
-
-
-            const nativeCookie =
-                document.cookie
-                    .split(";")
-                    .find(
-                        cookie =>
-                            cookie
-                                .trim()
-                                .startsWith("Native=")
-                    );
-
-
-            if (nativeCookie) {
-
-                const match =
-                    nativeCookie.match(regex);
-
-
-                if (match) {
-
-                    const {
-                        appId,
-                        appVersion
-                    } = match.groups;
-
-
-                    return {
-                        appId,
-                        appVersion
-                    };
-                }
-            }
-
-
-            return {};
-        }
-
-
-        const {
-            appId,
-            appVersion
-        } = getAppInfo();
-
-
-        /*
-         * Geolocation intentionally remains null.
-         *
-         * Your standalone page was receiving:
-         *
-         * GET /geolocations/v1/locations 403
-         *
-         * DK treats a failed geolocation call as null.
-         */
-
-        const approximateGeolocation = null;
-
-
-        /* =========================================================
-         *
-         * FETCH JWT
-         *
-         * Standalone equivalent of DK fetchToken()
-         *
-         * DK gets its token using GlideAjax.
-         * This standalone page uses /api/fetchJWT.
-         *
-         * ========================================================= */
-
-        async function fetchToken() {
-
-            updateStatus(
-                "Fetching JWT..."
-            );
-
-
-            try {
-
-                const response =
-                    await fetch(
-                        JWT_ENDPOINT,
-                        {
-                            method: "POST",
-
-                            headers: {
-
-                                "href":
-                                    HOST_PAGE,
-
-                                "Content-Type":
-                                    "application/json",
-
-                                "x-token-expiry":
-                                    TOKEN_EXPIRY,
-
-                                "x-bot-ref-id":
-                                    BOT_REF_ID,
-
-                                "x-user-details":
-                                    JSON.stringify(
-                                        USER_DETAILS
-                                    )
-                            }
-                        }
-                    );
-
-
-                console.log(
-                    "[NETOMI-DK] JWT API status:",
+            if (!response.ok) {
+                throw new Error(
+                    "JWT API returned HTTP " +
                     response.status
                 );
-
-
-                if (!response.ok) {
-
-                    throw new Error(
-                        "JWT API returned HTTP " +
-                        response.status
-                    );
-                }
-
-
-                const responseData =
-                    await response.json();
-
-
-                console.log(
-                    "[NETOMI-DK] JWT response received:",
-                    responseData
-                );
-
-
-                if (
-                    !responseData ||
-                    !responseData.token
-                ) {
-
-                    throw new Error(
-                        "JWT API response does not contain token"
-                    );
-                }
-
-
-                updateStatus(
-                    "JWT received successfully."
-                );
-
-
-                return responseData.token;
-
-
-            } catch (error) {
-
-                console.error(
-                    "[NETOMI-DK] JWT fetch failed:",
-                    error
-                );
-
-
-                updateStatus(
-                    "JWT fetch failed: " +
-                    error.message
-                );
-
-
-                return "";
             }
+
+            const responseData =
+                await response.json();
+
+            console.log(
+                "[NETOMI-DK] JWT response received:",
+                responseData
+            );
+
+            if (
+                !responseData ||
+                !responseData.token
+            ) {
+                throw new Error(
+                    "JWT API response does not contain token"
+                );
+            }
+
+            updateStatus("JWT received successfully.");
+
+            return responseData.token;
+
+        } catch (error) {
+            console.error(
+                "[NETOMI-DK] JWT fetch failed:",
+                error
+            );
+
+            updateStatus(
+                "JWT fetch failed: " +
+                error.message
+            );
+
+            return "";
+        }
+    }
+
+
+    /* =========================================================
+     * RENEW TOKEN
+     *
+     * This is deliberately the same shape as the working
+     * basic HTML's renewToken() callback.
+     * ========================================================= */
+
+    async function renewToken() {
+        const token = await fetchToken();
+
+        return {
+            token: token
+        };
+    }
+
+
+    /* =========================================================
+     * AUTH ERROR
+     * ========================================================= */
+
+    function handleAuthError(error) {
+        console.error(
+            "[NETOMI-DK] Authentication error:",
+            error
+        );
+    }
+
+
+    /* =========================================================
+     * VISITOR INFO
+     * ========================================================= */
+
+    function publishVisitorInfo() {
+        if (
+            !window.Netomi ||
+            !window.Netomi.chat ||
+            typeof window.Netomi.chat.publish !== "function"
+        ) {
+            console.warn(
+                "[NETOMI-DK] Netomi.chat.publish unavailable"
+            );
+            return;
         }
 
+        try {
+            window.Netomi.chat.publish(
+                "VISITOR_INFO",
+                {
+                    approximateGeolocation:
+                        approximateGeolocation,
 
-        /* =========================================================
-         *
-         * AUTHENTICATION ERROR
-         *
-         * Same purpose as DK handleAuthError()
-         *
-         * ========================================================= */
+                    appId:
+                        appId,
 
-        function handleAuthError(error) {
+                    appversion:
+                        appVersion,
+
+                    language:
+                        navigator.language || "en",
+
+                    device:
+                        getDevice(),
+
+                    brand:
+                        "dk"
+                }
+            );
+
+            console.log(
+                "[NETOMI-DK] VISITOR_INFO published"
+            );
+
+        } catch (error) {
+            console.error(
+                "[NETOMI-DK] VISITOR_INFO failed:",
+                error
+            );
+        }
+    }
+
+
+    /* =========================================================
+     * START RE-AUTHENTICATION
+     *
+     * IMPORTANT:
+     * Uses the SAME authModule.jwtAuth() API as the
+     * known-working basic authentication HTML.
+     * ========================================================= */
+
+    function startReAuthentication() {
+        if (reAuthenticateIntervalId !== null) {
+            clearInterval(
+                reAuthenticateIntervalId
+            );
+        }
+
+        console.log(
+            "[NETOMI-DK] Starting 60-second re-authentication timer"
+        );
+
+        reAuthenticateIntervalId =
+            setInterval(
+                async function () {
+
+                    console.log(
+                        "[NETOMI-DK] 60 seconds elapsed - starting JWT renewal"
+                    );
+
+                    try {
+                        if (
+                            !window.NETOMI_WEB_WIDGET ||
+                            !window.NETOMI_WEB_WIDGET.authModule ||
+                            typeof window.NETOMI_WEB_WIDGET.authModule.jwtAuth !==
+                                "function"
+                        ) {
+                            console.error(
+                                "[NETOMI-DK] authModule.jwtAuth() is unavailable"
+                            );
+                            return;
+                        }
+
+                        /*
+                         * SAME API as the working basic HTML.
+                         */
+                        window.NETOMI_WEB_WIDGET.authModule.jwtAuth(
+                            async function (
+                                sendTokenToNetomi
+                            ) {
+
+                                console.log(
+                                    "[NETOMI-DK] Netomi requested authentication renewal"
+                                );
+
+                                try {
+                                    const token =
+                                        await fetchToken();
+
+                                    if (!token) {
+                                        console.error(
+                                            "[NETOMI-DK] Renewal JWT is empty"
+                                        );
+                                        return;
+                                    }
+
+                                    /*
+                                     * IMPORTANT:
+                                     *
+                                     * The working basic HTML passes
+                                     * the JWT response object:
+                                     *
+                                     * { token: ... }
+                                     *
+                                     * Keep that behavior.
+                                     */
+                                    const tokenResponse = {
+                                        token: token
+                                    };
+
+                                    console.log(
+                                        "[NETOMI-DK] Sending renewed JWT to Netomi"
+                                    );
+
+                                    sendTokenToNetomi(
+                                        tokenResponse,
+                                        renewToken
+                                    );
+
+                                    console.log(
+                                        "[NETOMI-DK] JWT renewal completed"
+                                    );
+
+                                } catch (error) {
+                                    console.error(
+                                        "[NETOMI-DK] Renewal token fetch failed:",
+                                        error
+                                    );
+
+                                    handleAuthError(
+                                        error
+                                    );
+                                }
+                            }
+                        );
+
+                    } catch (error) {
+                        console.error(
+                            "[NETOMI-DK] Re-authentication failed:",
+                            error
+                        );
+
+                        handleAuthError(
+                            error
+                        );
+                    }
+
+                },
+                REAUTHENTICATION_INTERVAL
+            );
+    }
+
+
+    /* =========================================================
+     * AUTHENTICATE
+     *
+     * IMPORTANT CHANGE:
+     *
+     * Initial login uses:
+     *
+     * NETOMI_WEB_WIDGET.authModule.login(token)
+     *
+     * exactly like the known-working basic HTML.
+     * ========================================================= */
+
+    async function authenticate() {
+        if (authenticationInProgress) {
+            console.log(
+                "[NETOMI-DK] Authentication already in progress"
+            );
+            return;
+        }
+
+        authenticationInProgress = true;
+
+        try {
+            updateStatus(
+                "Starting Netomi authentication..."
+            );
+
+            console.log(
+                "[NETOMI-DK] Starting authentication"
+            );
+
+            const token =
+                await fetchToken();
+
+            if (!token) {
+                console.error(
+                    "[NETOMI-DK] Authentication stopped because JWT is empty"
+                );
+                return;
+            }
+
+
+            /*
+             * Use the widget authModule, not Netomi.chat.login().
+             */
+            if (
+                !window.NETOMI_WEB_WIDGET ||
+                !window.NETOMI_WEB_WIDGET.authModule
+            ) {
+                throw new Error(
+                    "NETOMI_WEB_WIDGET.authModule is not available"
+                );
+            }
+
+
+            if (
+                typeof window.NETOMI_WEB_WIDGET.authModule.login !==
+                "function"
+            ) {
+                throw new Error(
+                    "NETOMI_WEB_WIDGET.authModule.login() is not available"
+                );
+            }
+
+
+            console.log(
+                "[NETOMI-DK] Calling NETOMI_WEB_WIDGET.authModule.login()"
+            );
+
+
+            /*
+             * THIS is the key change from the previous DKissue.html.
+             *
+             * It matches the working basic authentication HTML.
+             */
+            window.NETOMI_WEB_WIDGET.authModule.login(
+                token
+            );
+
+
+            authenticated = true;
+
+
+            console.log(
+                "[NETOMI-DK] NETOMI_WEB_WIDGET.authModule.login() completed"
+            );
+
+
+            updateStatus(
+                "Netomi authentication successful."
+            );
+
+
+            /*
+             * Preserve DK visitor information.
+             */
+            publishVisitorInfo();
+
+
+            /*
+             * Start 60-second renewal.
+             */
+            startReAuthentication();
+
+
+            console.log(
+                "[NETOMI-DK] Authentication session established"
+            );
+
+        } catch (error) {
+            authenticated = false;
 
             console.error(
-                "[NETOMI-DK] Authentication error:",
+                "[NETOMI-DK] Authentication failed:",
+                error
+            );
+
+            updateStatus(
+                "Authentication failed: " +
+                error.message
+            );
+
+        } finally {
+            authenticationInProgress = false;
+        }
+    }
+
+
+    /* =========================================================
+     * LOGOUT
+     *
+     * Use the same authModule as the working basic HTML.
+     * ========================================================= */
+
+    function endAuth() {
+        console.log(
+            "[NETOMI-DK] Ending authentication session"
+        );
+
+        if (
+            reAuthenticateIntervalId !== null
+        ) {
+            clearInterval(
+                reAuthenticateIntervalId
+            );
+
+            reAuthenticateIntervalId =
+                null;
+        }
+
+        try {
+            if (
+                window.NETOMI_WEB_WIDGET &&
+                window.NETOMI_WEB_WIDGET.authModule &&
+                typeof window.NETOMI_WEB_WIDGET.authModule.logout ===
+                    "function"
+            ) {
+
+                window.NETOMI_WEB_WIDGET.authModule.logout();
+
+                console.log(
+                    "[NETOMI-DK] authModule.logout() completed"
+                );
+            }
+
+        } catch (error) {
+            console.error(
+                "[NETOMI-DK] Logout failed:",
                 error
             );
         }
 
+        authenticated = false;
 
-        /* =========================================================
-         *
-         * VISITOR INFO
-         *
-         * Same publish performed by DK authenticate()
-         *
-         * ========================================================= */
-
-        function publishVisitorInfo() {
-
-            if (
-                !window.Netomi ||
-                !window.Netomi.chat
-            ) {
-
-                console.warn(
-                    "[NETOMI-DK] Netomi.chat unavailable for VISITOR_INFO"
-                );
-
-                return;
-            }
+        updateStatus(
+            "Authentication cleared."
+        );
+    }
 
 
-            try {
+    /* =========================================================
+     * LOAD NETOMI SCRIPT
+     *
+     * IMPORTANT:
+     * Keep NETOMI_WEB_WIDGET.init() because this is present
+     * in the known-working basic HTML.
+     * ========================================================= */
 
-                window.Netomi.chat.publish(
-                    "VISITOR_INFO",
-                    {
-                        approximateGeolocation:
-                            approximateGeolocation,
+    (function loadNetomi() {
 
-                        appId:
-                            appId,
+        updateStatus(
+            "Loading Netomi widget..."
+        );
 
-                        appversion:
-                            appVersion,
-
-                        language:
-                            navigator.language || "en",
-
-                        device:
-                            getDevice(),
-
-                        brand:
-                            "dk"
-                    }
-                );
+        console.log(
+            "[NETOMI-DK] Loading Netomi script..."
+        );
 
 
-                console.log(
-                    "[NETOMI-DK] VISITOR_INFO published"
-                );
+        const ns =
+            document.createElement("script");
 
 
-            } catch (error) {
+        ns.src =
+            NETOMI_SCRIPT;
 
-                console.error(
-                    "[NETOMI-DK] VISITOR_INFO failed:",
-                    error
-                );
-            }
-        }
+        ns.type =
+            "text/javascript";
 
-
-        /* =========================================================
-         *
-         * START RE-AUTHENTICATION
-         *
-         * IMPORTANT:
-         *
-         * This DOES NOT execute immediately.
-         *
-         * First renewal happens after 60 seconds.
-         *
-         * Same behavior as DK.
-         *
-         * ========================================================= */
-
-        function startReAuthentication() {
-
-            /*
-             * Prevent duplicate timers.
-             */
-
-            if (
-                reAuthenticateIntervalId !== null
-            ) {
-
-                clearInterval(
-                    reAuthenticateIntervalId
-                );
-            }
+        ns.async =
+            true;
 
 
-            console.log(
-                "[NETOMI-DK] Starting 60-second re-authentication timer"
-            );
+        ns.setAttribute(
+            "botRefId",
+            BOT_REF_ID
+        );
 
 
-            reAuthenticateIntervalId =
-                setInterval(
-                    async function () {
-
-                        console.log(
-                            "[NETOMI-DK] 60 seconds elapsed - starting JWT renewal"
-                        );
-
-
-                        try {
-
-                            /*
-                             * Make sure Netomi.chat is still available.
-                             */
-
-                            if (
-                                !window.Netomi ||
-                                !window.Netomi.chat ||
-                                typeof window.Netomi.chat.authenticate !==
-                                    "function"
-                            ) {
-
-                                console.error(
-                                    "[NETOMI-DK] Netomi.chat.authenticate() is unavailable"
-                                );
-
-                                return;
-                            }
+        /*
+         * Keep this for MQTT/event behavior.
+         */
+        ns.setAttribute(
+            "enableEventQueue",
+            "true"
+        );
 
 
-                            /*
-                             * Same pattern as DK:
-                             *
-                             * Netomi.chat.authenticate(
-                             *     async sendTokenToNetomi => {
-                             *
-                             *         ...
-                             *
-                             *     }
-                             * )
-                             */
-
-                            window.Netomi.chat.authenticate(
-                                async function (
-                                    sendTokenToNetomi
-                                ) {
-
-                                    console.log(
-                                        "[NETOMI-DK] Netomi requested authentication renewal"
-                                    );
+        ns.setAttribute(
+            "isDynamicEnv",
+            "false"
+        );
 
 
-                                    const token =
-                                        await fetchToken();
+        const firstScript =
+            document.getElementsByTagName(
+                "script"
+            )[0];
 
 
-                                    if (
-                                        token !== ""
-                                    ) {
-
-                                        console.log(
-                                            "[NETOMI-DK] Sending renewed JWT to Netomi"
-                                        );
+        firstScript.parentNode.insertBefore(
+            ns,
+            firstScript
+        );
 
 
-                                        sendTokenToNetomi(
-                                            token,
-                                            handleAuthError
-                                        );
+        /* =====================================================
+         * SCRIPT LOADED
+         * ===================================================== */
 
-
-                                        console.log(
-                                            "[NETOMI-DK] JWT renewal completed"
-                                        );
-
-                                    } else {
-
-                                        console.error(
-                                            "[NETOMI-DK] Renewal JWT is empty"
-                                        );
-                                    }
-                                }
-                            );
-
-
-                        } catch (error) {
-
-                            console.error(
-                                "[NETOMI-DK] Re-authentication failed:",
-                                error
-                            );
-
-
-                            handleAuthError(
-                                error
-                            );
-                        }
-
-                    },
-                    REAUTHENTICATION_INTERVAL
-                );
-        }
-
-
-        /* =========================================================
-         *
-         * AUTHENTICATE
-         *
-         * IMPORTANT:
-         *
-         * Authentication occurs BEFORE the user needs
-         * the MQTT/conversation functionality.
-         *
-         * This matches the DK implementation.
-         *
-         * ========================================================= */
-
-        async function authenticate() {
-
-            if (
-                authenticationInProgress
-            ) {
+        ns.onload =
+            async function () {
 
                 console.log(
-                    "[NETOMI-DK] Authentication already in progress"
+                    "[NETOMI-DK] Netomi script loaded"
                 );
-
-                return;
-            }
-
-
-            authenticationInProgress =
-                true;
-
-
-            try {
 
                 updateStatus(
-                    "Starting Netomi authentication..."
-                );
-
-
-                console.log(
-                    "[NETOMI-DK] Starting authentication"
+                    "Netomi widget loaded. Initializing..."
                 );
 
 
                 /*
-                 * Get initial JWT.
+                 * IMPORTANT:
+                 *
+                 * Initialize the widget exactly like the
+                 * working basic HTML.
+                 *
+                 * We do NOT use onNewConversation().
                  */
-
-                const token =
-                    await fetchToken();
-
-
-                /*
-                 * If JWT cannot be obtained,
-                 * do NOT attempt login.
-                 */
-
                 if (
-                    token === ""
+                    window.NETOMI_WEB_WIDGET &&
+                    typeof window.NETOMI_WEB_WIDGET.init ===
+                        "function"
                 ) {
 
-                    console.error(
-                        "[NETOMI-DK] Authentication stopped because JWT is empty"
+                    console.log(
+                        "[NETOMI-DK] Initializing NETOMI_WEB_WIDGET..."
                     );
 
-                    return;
+                    window.NETOMI_WEB_WIDGET.init(
+                        function () {
+
+                            console.log(
+                                "[NETOMI-DK] NETOMI_WEB_WIDGET initialized"
+                            );
+                        }
+                    );
+
+                } else {
+
+                    console.warn(
+                        "[NETOMI-DK] NETOMI_WEB_WIDGET.init() is unavailable"
+                    );
                 }
 
 
                 /*
-                 * Make sure Netomi SDK is available.
+                 * Wait for the lower-level Netomi object too,
+                 * because VISITOR_INFO uses Netomi.chat.publish().
                  */
+                let attempts = 0;
+                const maxAttempts = 100;
+
+
+                while (
+                    (
+                        !window.Netomi ||
+                        !window.Netomi.chat
+                    ) &&
+                    attempts < maxAttempts
+                ) {
+
+                    await new Promise(
+                        resolve =>
+                            setTimeout(
+                                resolve,
+                                100
+                            )
+                    );
+
+                    attempts++;
+                }
+
 
                 if (
                     !window.Netomi ||
                     !window.Netomi.chat
                 ) {
 
-                    throw new Error(
-                        "Netomi.chat is not available"
-                    );
-                }
-
-
-                if (
-                    typeof window.Netomi.chat.login !==
-                    "function"
-                ) {
-
-                    throw new Error(
-                        "Netomi.chat.login() is not available"
-                    );
-                }
-
-
-                /* -------------------------------------------------
-                 *
-                 * INITIAL LOGIN
-                 *
-                 * -------------------------------------------------
-                 */
-
-                console.log(
-                    "[NETOMI-DK] Calling Netomi.chat.login()"
-                );
-
-
-                window.Netomi.chat.login(
-                    token
-                );
-
-
-                authenticated =
-                    true;
-
-
-                console.log(
-                    "[NETOMI-DK] Netomi.chat.login() completed"
-                );
-
-
-                updateStatus(
-                    "Netomi authentication successful."
-                );
-
-
-                /* -------------------------------------------------
-                 *
-                 * VISITOR INFO
-                 *
-                 * -------------------------------------------------
-                 */
-
-                publishVisitorInfo();
-
-
-                /* -------------------------------------------------
-                 *
-                 * START 60 SECOND RE-AUTHENTICATION
-                 *
-                 * -------------------------------------------------
-                 */
-
-                startReAuthentication();
-
-
-                console.log(
-                    "[NETOMI-DK] Authentication session established"
-                );
-
-
-            } catch (error) {
-
-                authenticated =
-                    false;
-
-
-                console.error(
-                    "[NETOMI-DK] Authentication failed:",
-                    error
-                );
-
-
-                updateStatus(
-                    "Authentication failed: " +
-                    error.message
-                );
-
-
-            } finally {
-
-                authenticationInProgress =
-                    false;
-            }
-        }
-
-
-        /* =========================================================
-         *
-         * LOGOUT
-         *
-         * ========================================================= */
-
-        function endAuth() {
-
-            console.log(
-                "[NETOMI-DK] Ending authentication session"
-            );
-
-
-            /*
-             * Stop renewal.
-             */
-
-            if (
-                reAuthenticateIntervalId !== null
-            ) {
-
-                clearInterval(
-                    reAuthenticateIntervalId
-                );
-
-
-                reAuthenticateIntervalId =
-                    null;
-            }
-
-
-            /*
-             * Logout from Netomi.
-             */
-
-            try {
-
-                if (
-                    window.Netomi &&
-                    window.Netomi.chat &&
-                    typeof window.Netomi.chat.logout ===
-                        "function"
-                ) {
-
-                    window.Netomi.chat.logout();
-
-
-                    console.log(
-                        "[NETOMI-DK] Netomi.chat.logout() completed"
-                    );
-                }
-
-
-            } catch (error) {
-
-                console.error(
-                    "[NETOMI-DK] Logout failed:",
-                    error
-                );
-            }
-
-
-            authenticated =
-                false;
-
-
-            updateStatus(
-                "Authentication cleared."
-            );
-        }
-
-
-        /* =========================================================
-         *
-         * LOAD NETOMI SCRIPT
-         *
-         * ========================================================= */
-
-        (function loadNetomi() {
-
-            updateStatus(
-                "Loading Netomi widget..."
-            );
-
-
-            console.log(
-                "[NETOMI-DK] Loading Netomi script..."
-            );
-
-
-            const ns =
-                document.createElement(
-                    "script"
-                );
-
-
-            ns.src =
-                NETOMI_SCRIPT;
-
-
-            ns.type =
-                "text/javascript";
-
-
-            ns.async =
-                true;
-
-
-            /*
-             * Same bot configuration.
-             */
-
-            ns.setAttribute(
-                "botRefId",
-                BOT_REF_ID
-            );
-
-
-            /*
-             * Required for event/MQTT behavior.
-             */
-
-            ns.setAttribute(
-                "enableEventQueue",
-                "true"
-            );
-
-
-            ns.setAttribute(
-                "isDynamicEnv",
-                "false"
-            );
-
-
-            const firstScript =
-                document.getElementsByTagName(
-                    "script"
-                )[0];
-
-
-            firstScript.parentNode.insertBefore(
-                ns,
-                firstScript
-            );
-
-
-            /* =====================================================
-             *
-             * SCRIPT LOADED
-             *
-             * DK performs authenticate() from script.onload.
-             *
-             * ===================================================== */
-
-            ns.onload =
-                async function () {
-
-                    console.log(
-                        "[NETOMI-DK] Netomi script loaded"
-                    );
-
-
-                    updateStatus(
-                        "Netomi widget loaded. Starting authentication..."
-                    );
-
-
-                    /*
-                     * Give the SDK a moment to finish exposing
-                     * its public objects.
-                     *
-                     * This does NOT open the widget.
-                     */
-
-                    let attempts =
-                        0;
-
-
-                    const maxAttempts =
-                        100;
-
-
-                    while (
-                        (
-                            !window.Netomi ||
-                            !window.Netomi.chat
-                        ) &&
-                        attempts < maxAttempts
-                    ) {
-
-                        await new Promise(
-                            resolve =>
-                                setTimeout(
-                                    resolve,
-                                    100
-                                )
-                        );
-
-
-                        attempts++;
-                    }
-
-
-                    if (
-                        !window.Netomi ||
-                        !window.Netomi.chat
-                    ) {
-
-                        console.error(
-                            "[NETOMI-DK] Netomi.chat did not become available"
-                        );
-
-
-                        updateStatus(
-                            "Netomi SDK did not become ready."
-                        );
-
-
-                        return;
-                    }
-
-
-                    console.log(
-                        "[NETOMI-DK] Netomi.chat is ready"
-                    );
-                    /* =========================================================
- *
- * NETOMI NEW CONVERSATION HANDLER
- *
- * This allows the Netomi widget to complete its
- * native new-conversation lifecycle.
- *
- * ========================================================= */
-
-if (
-    window.Netomi &&
-    window.Netomi.chat &&
-    typeof window.Netomi.chat.onNewConversation === "function"
-) {
-
-    console.log(
-        "[NETOMI-DK] Registering onNewConversation handler"
-    );
-
-    window.Netomi.chat.onNewConversation(function (data) {
-
-        console.log(
-            "[NETOMI-DK] New conversation event received:",
-            data
-        );
-
-        /*
-         * IMPORTANT:
-         *
-         * Tell Netomi that our new-conversation
-         * callback has completed.
-         */
-        if (
-            data &&
-            typeof data.done === "function"
-        ) {
-
-            console.log(
-                "[NETOMI-DK] Calling new conversation done()"
-            );
-
-            data.done();
-
-        } else {
-
-            console.warn(
-                "[NETOMI-DK] onNewConversation data.done() is unavailable"
-            );
-        }
-
-    });
-
-} else {
-
-    console.warn(
-        "[NETOMI-DK] Netomi.chat.onNewConversation() is not available"
-    );
-}
-
-
-                    /*
-                     * Authenticate BEFORE the user interacts
-                     * with the widget.
-                     *
-                     * This is the important fix for the MQTT
-                     * client error.
-                     */
-
-                    await authenticate();
-
-
-                    /*
-                     * Do not call openWidget().
-                     *
-                     * The Netomi floating widget remains responsible
-                     * for opening/minimizing itself when the user
-                     * clicks it.
-                     */
-
-                    console.log(
-                        "[NETOMI-DK] Ready - user can now click the widget"
-                    );
-                };
-
-
-            /* =====================================================
-             *
-             * SCRIPT ERROR
-             *
-             * ===================================================== */
-
-            ns.onerror =
-                function (error) {
-
                     console.error(
-                        "[NETOMI-DK] Failed to load Netomi script:",
-                        error
+                        "[NETOMI-DK] Netomi.chat did not become available"
                     );
-
 
                     updateStatus(
-                        "Failed to load Netomi widget."
+                        "Netomi SDK did not become ready."
                     );
-                };
 
-        })();
-
-
-        /* =========================================================
-         *
-         * DEBUG FUNCTIONS
-         *
-         * Available from browser console:
-         *
-         * authenticate()
-         * endAuth()
-         * fetchToken()
-         *
-         * ========================================================= */
-
-        window.authenticate =
-            authenticate;
+                    return;
+                }
 
 
-        window.endAuth =
-            endAuth;
+                console.log(
+                    "[NETOMI-DK] Netomi.chat is ready"
+                );
 
 
-        window.fetchToken =
-            fetchToken;
+                /*
+                 * Authenticate BEFORE the user interacts
+                 * with the widget.
+                 */
+                await authenticate();
 
 
-    </script>
+                /*
+                 * Do NOT manually open the widget.
+                 *
+                 * The native Netomi floating icon remains
+                 * responsible for opening the widget.
+                 */
+                console.log(
+                    "[NETOMI-DK] Ready - user can now click the widget"
+                );
+            };
+
+
+        /* =====================================================
+         * SCRIPT ERROR
+         * ===================================================== */
+
+        ns.onerror =
+            function (error) {
+
+                console.error(
+                    "[NETOMI-DK] Failed to load Netomi script:",
+                    error
+                );
+
+                updateStatus(
+                    "Failed to load Netomi widget."
+                );
+            };
+
+    })();
+
+
+    /* =========================================================
+     * DEBUG FUNCTIONS
+     *
+     * Browser console:
+     *
+     * authenticate()
+     * endAuth()
+     * fetchToken()
+     * ========================================================= */
+
+    window.authenticate =
+        authenticate;
+
+    window.endAuth =
+        endAuth;
+
+    window.fetchToken =
+        fetchToken;
+
+</script>
 
 </body>
-
 </html>
