@@ -1,0 +1,67 @@
+<script>
+(function() {
+  var ns = document.createElement('script');
+  ns.src = 'https://chatapps-eu.netomi.com/app/script.js';
+  ns.async = true;
+
+  ns.setAttribute('id', 'c02fff2f-dcd8-4197-a098-4026f5ec6e59');
+  ns.setAttribute("enableEventQueue", "true");
+
+  var s = document.getElementsByTagName('script')[0] || document.body;
+  s.parentNode.insertBefore(ns, s);
+
+  ns.onload = function () {
+    console.log("Widget script loaded");
+
+    if (window.NETOMI_WEB_WIDGET) {
+      window.NETOMI_WEB_WIDGET.init(() => {
+        console.log("Widget initialized");
+      });
+    }
+
+    waitForWidget();
+  };
+
+  function waitForWidget() {
+    const checkInterval = setInterval(() => {
+      const widget = document.getElementById('netomiChatWindow');
+
+      if (widget) {
+        clearInterval(checkInterval);
+        console.log("Widget iframe detected");
+
+        trackWidget(widget);
+      }
+    }, 500);
+  }
+
+  function trackWidget(widget) {
+    let lastState = null;
+
+    const observer = new MutationObserver(() => {
+      const style = window.getComputedStyle(widget);
+
+      const isVisible =
+        style.display !== "none" &&
+        style.visibility !== "hidden" &&
+        widget.offsetHeight > 0;
+
+      if (isVisible && lastState !== "open") {
+        console.log('[EVENT] Widget opened');
+        lastState = "open";
+      }
+
+      if (!isVisible && lastState === "open") {
+        console.log('[EVENT] Widget minimized/closed');
+        lastState = "closed";
+      }
+    });
+
+    observer.observe(widget, {
+      attributes: true,
+      attributeFilter: ['style', 'class']
+    });
+  }
+
+})();
+</script>
