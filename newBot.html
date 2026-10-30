@@ -1,49 +1,69 @@
 
-<script>
-(function () {
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Netomi Visitor Info Test</title>
+</head>
+<body>
 
-    // Function to publish visitor information
-    function setVisitorInfo(button_source) {
-        if (window.NETOMI_WEB_WIDGET) {
-            window.NETOMI_WEB_WIDGET.publish('VISITOR_INFO', {
-                BUTTON_SOURCE: button_source
-            });
+    <h2>Netomi Visitor Information Test</h2>
 
-            console.log("Visitor info published:", button_source);
-        } else {
-            console.error("Netomi widget is not available");
-        }
-    }
+    <p>Visitor details will be sent automatically when the widget initializes.</p>
 
-    var ns = document.createElement('script');
+    <div id="status">Loading Netomi widget...</div>
 
-    ns.src = 'https://chatapps-qa-a.netomi.com/app/script.js';
-    ns.async = true;
+    <script>
+    (function () {
 
-    ns.setAttribute('id', 'a5addd98-2627-437b-899c-2f97ff2e2b18');
-    ns.setAttribute('enableEventQueue', 'true');
+        // Sample visitor information
+        var visitorInfo = {
+            user_Name: "Revan Shasti",
+            user_Email: "123@gmail.com",
+            user_phoneNumber: "85319 91686",
+            customer_ID: "CUST-10001"
+        };
 
-    var s = document.getElementsByTagName('script')[0] || document.body;
-    s.parentNode.insertBefore(ns, s);
+        var ns = document.createElement('script');
 
-    ns.onload = function () {
-        console.log("Widget script loaded");
+        ns.src = 'https://chatapps-qa-a.netomi.com/app/script.js';
+        ns.async = true;
 
-        if (window.NETOMI_WEB_WIDGET) {
-            window.NETOMI_WEB_WIDGET.init(function () {
-                console.log("Widget initialized");
+        ns.setAttribute('id', 'a5addd98-2627-437b-899c-2f97ff2e2b18');
+        ns.setAttribute('enableEventQueue', 'true');
 
-                // Publish visitor information after initialization
-                setVisitorInfo("Website");
-            });
-        } else {
-            console.error("NETOMI_WEB_WIDGET is not available");
-        }
-    };
+        ns.onload = function () {
 
-    ns.onerror = function () {
-        console.error("Failed to load Netomi widget script");
-    };
+            console.log("Netomi script loaded");
 
-})();
-</script>
+            if (window.NETOMI_WEB_WIDGET) {
+
+                window.NETOMI_WEB_WIDGET.init(function () {
+
+                    console.log("Netomi widget initialized");
+
+                    // Send visitor information to the widget
+                    window.NETOMI_WEB_WIDGET.publish('VISITOR_INFO', visitorInfo);
+
+                    console.log("Visitor information published:", visitorInfo);
+
+                    document.getElementById('status').innerText =
+                        "Widget initialized and visitor information published";
+
+                });
+
+            } else {
+                console.error("NETOMI_WEB_WIDGET is not available");
+            }
+        };
+
+        ns.onerror = function () {
+            console.error("Failed to load Netomi script");
+        };
+
+        document.head.appendChild(ns);
+
+    })();
+    </script>
+
+</body>
+</html>
