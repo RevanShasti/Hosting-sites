@@ -14,10 +14,10 @@
   <script>
     (function() {
       var ns = document.createElement('script');
-      ns.src = ('https://chatapps-us.netomigov.com/app/script.js');
+      ns.src = ('https://chatapps-qa-a.netomigov.com/app/script.js');
       ns.type = 'text/javascript';
       ns.async = true;
-      ns.setAttribute('botRefId', 'e8c4ed04-8516-4a87-938f-5ac1c937d339');
+      ns.setAttribute('botRefId', 'a5addd98-2627-437b-899c-2f97ff2e2b18');
       ns.setAttribute('isDynamicEnv', 'false');
       var s = document.getElementsByTagName('script')[0];
       s.parentNode.insertBefore(ns, s);
@@ -38,7 +38,7 @@
             'Content-Type': 'application/json',
             'x-token-expiry': '10m',
             'x-bot-ref-id':'e8c4ed04-8516-4a87-938f-5ac1c937d339',
-            'x-user-details': JSON.stringify({"name": "Revan Shasti", "externalId": "revan@gmail.com"})
+            'x-user-details': JSON.stringify({"name": "Revan Shasti", "emailId": "revan@gmail.com","phone":"90909 80808"})
           }
         });
         const { token } = await tokenApiCall.json();
@@ -52,7 +52,7 @@
           'Content-Type': 'application/json', 
           'x-token-expiry': '10m', 
           'x-bot-ref-id':'e8c4ed04-8516-4a87-938f-5ac1c937d339', 
-          'x-user-details': JSON.stringify({"name": "Revan Shasti", "externalId": "revan@gmail.com"}) 
+          'x-user-details': JSON.stringify({"name": "Revan Shasti", "emailId": "revan@gmail.com","phone":"90909 80808"}) 
         }
       });
 
@@ -70,7 +70,7 @@
               'Content-Type': 'application/json',
               'x-token-expiry': '10m',
               'x-bot-ref-id':'e8c4ed04-8516-4a87-938f-5ac1c937d339',
-              'x-user-details': JSON.stringify({"name": "Revan Shasti", "externalId": "revan@gmail.com"})
+              'x-user-details': JSON.stringify({"name": "Revan Shasti", "emailId": "revan@gmail.com","phone":"90909 80808"})
             }
           });
 
