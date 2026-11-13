@@ -1,141 +1,63 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Netomi Chat</title>
-
-  <script>
-    (function () {
-      var ns = document.createElement('script');
-
-      ns.src = 'https://chatapps-qa.netomi.com/app/script.js';
-      ns.type = 'text/javascript';
-      ns.async = true;
-
-      ns.setAttribute(
-        'botRefId',
-        'f8997270-9f62-4315-9de9-d743e587d5bb'
-      );
-
-      ns.setAttribute('enableEventQueue', 'true');
-
-      ns.onload = function () {
-        var authStarted = false;
-
-        Netomi.chat.onLoad(() => {
-            console.log('1: netomi onLoad being called')
-        });
-      };
-
-      var s = document.getElementsByTagName('script')[0];
-      s.parentNode.insertBefore(ns, s);
-
-      var reAuthenticateIntervalId = null;
-
-      async function authenticate() {
-        console.log('2: log is being called')
-        // Do not expose a real JWT directly in client-side source code.
-        // Replace this with your valid token only for testing.
-        const token = '';
-
-        if (token !== '') {
-          Netomi.chat.login(token);
-        }
-
-        reAuthenticateIntervalId = setInterval(function () {
-          Netomi.chat.authenticate(async function (sendTokenToNetomi) {
-            try {
-              const token = await fetchToken();
-
-              if (token !== '') {
-                sendTokenToNetomi(token, handleAuthError);
-              }
-            } catch (error) {
-              console.error('Token refresh failed:', error);
-              handleAuthError();
-            }
-          });
-        }, 55000);
-      }
-
-      async function fetchToken() {
-        const queryString = window.location.search;
-        const urlParams = new URLSearchParams(queryString);
-        const login = urlParams.get('login');
-
-        let token = '';
-
-        if (login === 'true') {
-          try {
-            const tokenApiCall = await fetch(
-              'https://chatapps-qa.netomi.com/api/fetchJWT',
-              {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'x-token-expiry': '1m',
-                  'x-bot-ref-id':
-                    'f8997270-9f62-4315-9de9-d743e587d5bb',
-                  'x-user-details': JSON.stringify({
-                    uname: 'John',
-                    externalId: 'random@random1',
-                    metadata: {
-                      Name: 'John Doe',
-                      ID: 'NET9879',
-                      Organization: 'ABCSamples',
-                      curTime: new Date().toLocaleTimeString(),
-                      Location: {
-                        City: 'Chicago',
-                        State: 'Illinois'
-                      }
-                    }
-                  })
-                }
-              }
-            );
-
-            if (!tokenApiCall.ok) {
-              throw new Error(
-                'Token API returned HTTP ' + tokenApiCall.status
-              );
-            }
-
-            const resp = await tokenApiCall.json();
-            token = resp.token || '';
-          } catch (error) {
-            console.error('Unable to fetch JWT:', error);
-          }
-        }
-
-        console.log('Token available:', token !== '');
-        return token;
-      }
-
-      function handleAuthError() {
-        /*
-          Clients can perform necessary actions here.
-          This function is called by Netomi upon token
-          expiration or when a refresh token is not received.
-        */
-        console.log('handleAuthError');
-      }
-
-      /*
-      function endAuth() {
-        if (reAuthenticateIntervalId !== null) {
-          clearInterval(reAuthenticateIntervalId);
-          reAuthenticateIntervalId = null;
-        }
-
-        Netomi.chat.logout();
-      }
-      */
-
-    })();
-  </script>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <meta name="RATING" content="RTA-5042-1996-1400-1577-RTA" />
 </head>
-
 <body>
+    <button onclick="Netomi.chat.openWidget()">Support</button>
+    <script>
+      (function() {
+        var ns = document.createElement('script');
+        ns.src = 'https://chatapps-qa-a.netomi.com/app/script.js';
+        ns.type = 'text/javascript';
+        ns.async = true;
+        ns.setAttribute('botRefId', 'eeb746fc-b6b1-48c1-9cf3-86df01bdfbed');
+        ns.setAttribute("enableEventQueue", "true");
+        ns.setAttribute('isDynamicEnv', 'false');
+        ns.setAttribute("title", "Testing")
+        ns.setAttribute("color", "#5621db")
+        var s = document.getElementsByTagName('script')[0];
+        s.parentNode.insertBefore(ns, s);
+        ns.onload = function () {
+          window.NETOMI_WEB_WIDGET.init(() => {
+        Netomi.chat.changeBotConfig({
+          formControls: {
+            goBack: {
+              label: 'Previous piyush new',
+              style: { fill: '#118CD8', stroke: '#eff549', text: '#de31d8' }
+            },
+            restart: {
+              label: 'Start Over piyush new',
+              style: { fill: '#1C1F2A', stroke: '#eff549', text: '#de31d8' }
+            },
+            skip: {
+              label: 'Continue singh new',
+              style: { fill: '#FFFFFF', stroke: '#eff549', text: '#de31d8' }
+            }
+          }
+        })
+      });
+
+          // ========== ON_NEW_CONVERSATION Event ==========
+          // This event fires ONLY when a new conversationId is created (not on page reload or MQTT reconnect).
+          // The widget will WAIT for done() to be called before proceeding with proactive greetings.
+          // If done() is not called, the widget will proceed after a timeout (default 2 seconds).
+          Netomi.chat.onNewConversation(function(data) {
+            console.log('[ON_NEW_CONVERSATION] New conversation started! ConversationId:', data.conversationId);
+
+            // Example: Call your API with the new conversationId
+            // Replace this with your actual API call
+            setTimeout(function() {
+              console.log('[ON_NEW_CONVERSATION] Async work complete. Calling done() to unblock the widget.');
+              data.done(); // IMPORTANT: Call done() to unblock the widget and allow greetings to proceed
+            }, 1000); // Simulating a 1-second API call
+          });
+        };
+      })();
+    </script>
 </body>
 </html>
